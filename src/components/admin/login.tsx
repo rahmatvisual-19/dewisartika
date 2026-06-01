@@ -1,0 +1,147 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Lock, User, ArrowLeft, Loader2 } from 'lucide-react';
+
+export default function Login() {
+  const router = useRouter();
+  const [username, setUsername]   = useState('');
+  const [password, setPassword]   = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError]         = useState('');
+
+  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    // Simulasi autentikasi — ganti dengan Supabase Auth nanti
+    setTimeout(() => {
+      if (username === 'admin' && password === 'admin123') {
+        router.push('/admin');
+      } else {
+        setIsLoading(false);
+        setError('Username atau kata sandi salah.');
+      }
+    }, 1000);
+  };
+
+  const inputClass =
+    "w-full pl-10 pr-4 py-3 h-12 rounded-xl border border-slate-200 bg-slate-50/50 " +
+    "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
+    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] " +
+    "transition-all duration-200";
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+
+      {/* Kembali */}
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 font-[family-name:var(--font-inter)] text-[13px]
+                   text-slate-500 hover:text-[#A47251] transition-colors mb-6 ml-1"
+      >
+        <ArrowLeft size={15} strokeWidth={1.5} /> Kembali ke Beranda
+      </Link>
+
+      {/* Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="bg-white rounded-[2rem] border border-slate-100 p-8 sm:p-10
+                   shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
+      >
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1
+            className="font-[family-name:var(--font-instrument-serif)] text-4xl font-normal text-[#A47251] mb-1"
+            style={{ letterSpacing: '-0.02em' }}
+          >
+            TailorCraft
+          </h1>
+          <h2 className="font-[family-name:var(--font-inter)] text-[16px] font-bold text-slate-800">
+            Admin Portal
+          </h2>
+          <p className="font-[family-name:var(--font-inter)] text-[13px] text-slate-500 mt-1.5">
+            Silakan masuk untuk mengelola katalog dan pesanan.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="space-y-5" suppressHydrationWarning>
+
+          {/* Pesan error */}
+          {error && (
+            <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-100
+                            font-[family-name:var(--font-inter)] text-[13px] text-red-600">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="username"
+              className="block font-[family-name:var(--font-inter)] text-[13px] font-semibold text-slate-700 mb-1.5">
+              Username
+            </label>
+            <div className="relative">
+              <input
+                type="text" id="username"
+                placeholder="Masukkan username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                suppressHydrationWarning
+                className={inputClass}
+              />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="password"
+              className="block font-[family-name:var(--font-inter)] text-[13px] font-semibold text-slate-700 mb-1.5">
+              Kata Sandi
+            </label>
+            <div className="relative">
+              <input
+                type="password" id="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                suppressHydrationWarning
+                className={inputClass}
+              />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            suppressHydrationWarning
+            className="w-full h-12 inline-flex items-center justify-center gap-2 mt-2
+                       font-[family-name:var(--font-inter)] text-[14px] font-semibold
+                       bg-[#A47251] text-white rounded-xl
+                       hover:bg-[#DD9E59] disabled:opacity-70 disabled:cursor-not-allowed
+                       transition-all duration-300 active:scale-[0.98]
+                       shadow-[0_4px_16px_rgba(164,114,81,0.25)]"
+          >
+            {isLoading
+              ? <><Loader2 size={16} className="animate-spin" /> Memproses...</>
+              : 'Masuk ke Dashboard'
+            }
+          </button>
+
+          <p className="font-[family-name:var(--font-inter)] text-[11px] text-center text-slate-400">
+            Demo: username <strong>admin</strong> / password <strong>admin123</strong>
+          </p>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
