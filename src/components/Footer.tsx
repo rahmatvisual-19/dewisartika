@@ -16,14 +16,14 @@ export default function Footer() {
         </div>
 
         {/* Deskripsi */}
-        <p className="font-[family-name:var(--font-inter)] text-center max-w-xl text-slate-500 text-sm leading-relaxed">
+        <p className="font-[family-name:var(--font-inter)] text-center max-w-xl text-slate-600 text-sm leading-relaxed">
           Mewujudkan busana impian Anda dengan presisi tingkat tinggi dan material premium. Dedikasi kami untuk keanggunan gaya Anda di setiap jahitan.
         </p>
       </div>
 
       {/* Hak Cipta */}
       <div className="border-t border-[#8B5E3C]/10">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center font-[family-name:var(--font-inter)] text-sm text-slate-400">
+        <div className="max-w-7xl mx-auto px-6 py-6 text-center font-[family-name:var(--font-inter)] text-sm text-[#596A80]">
           <Link href="/" className="font-semibold text-[#8B5E3C] hover:text-[#DD9E59] transition-colors">
             TailorCraft
           </Link>{" "}

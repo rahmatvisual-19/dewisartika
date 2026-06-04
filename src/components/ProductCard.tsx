@@ -40,12 +40,12 @@ export default function ProductCard({ product }: { product: Product }) {
 
       {/* Info */}
       <div className="px-1 flex flex-col flex-grow">
-        <Link href={`/katalog/${product.id}`} className="block hover:text-[#8B5E3C] transition-colors">
-          <h3 className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 leading-snug mb-1">
+        <Link href={`/katalog/${product.id}`} className="inline-block py-1 min-h-[24px] hover:text-[#8B5E3C] transition-colors">
+          <h3 className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 leading-snug">
             {product.name}
           </h3>
         </Link>
-        <p className="font-[family-name:var(--font-inter)] text-[12px] text-slate-400 mb-4">
+        <p className="font-[family-name:var(--font-inter)] text-[12px] text-[#596A80] mt-1 mb-4">
           {product.category}
         </p>
 
@@ -54,7 +54,7 @@ export default function ProductCard({ product }: { product: Product }) {
             <span className="font-[family-name:var(--font-inter)] font-bold text-[#8B5E3C] text-base leading-tight break-all">
               {product.price}
             </span>
-            <span className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-slate-400 mt-0.5">
+            <span className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-[#596A80] mt-0.5">
               {product.unit}
             </span>
           </div>

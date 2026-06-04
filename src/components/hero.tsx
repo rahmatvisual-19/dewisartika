@@ -16,12 +16,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#E89B7E] text-white hover:bg-[#d4876a] active:scale-95",
+        default: "bg-[#A65D43] text-white hover:bg-[#8D4A32] active:scale-95",
         destructive: "bg-red-500 text-white hover:bg-red-500/90",
-        outline: "border border-[#E89B7E] text-[#E89B7E] bg-transparent hover:bg-[#E89B7E] hover:text-white active:scale-95",
+        outline: "border border-[#A65D43] text-[#A65D43] bg-transparent hover:bg-[#A65D43] hover:text-white active:scale-95",
         secondary: "bg-[#F0D8A1] text-[#8B5E3C] hover:bg-[#F0D8A1]/80",
         ghost: "hover:bg-[#F0D8A1] hover:text-[#8B5E3C]",
-        link: "text-[#E89B7E] underline-offset-4 hover:underline",
+        link: "text-[#A65D43] underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -154,7 +154,7 @@ const HeroSection = ({ title, subtitle, actions, stats, images, className }: Her
                     {stat.value}
                   </p>
                   <p
-                    className="font-[family-name:var(--font-inter)] text-[12px] font-medium text-slate-400 mt-0.5 tracking-wide"
+                    className="font-[family-name:var(--font-inter)] text-[12px] font-medium text-[#596A80] mt-0.5 tracking-wide"
                   >
                     {stat.label}
                   </p>

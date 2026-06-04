@@ -397,7 +397,7 @@ export default function ProductDetailView({ product }: { product: ProductData })
               <Link
                 href="/katalog"
                 className="font-[family-name:var(--font-inter)] text-[13px] font-semibold text-[#8B5E3C]
-                           hover:text-[#E89B7E] transition-colors flex items-center gap-1"
+                           hover:text-[#A65D43] transition-colors flex items-center gap-1"
               >
                 Lihat Semua <ChevronRight size={14} strokeWidth={2} />
               </Link>

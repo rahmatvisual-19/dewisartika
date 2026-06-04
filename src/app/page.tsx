@@ -85,7 +85,7 @@ export default async function Home() {
         Seni{' '}
         <em className="not-italic italic">Jahitan</em>
         <br />
-        <span className="text-[#E89B7E]">Sempurna</span>
+        <span className="text-[#A65D43]">Sempurna</span>
       </h1>
     ),
     subtitle: 'Wujudkan busana impian Anda bersama TailorCraft. Kami menggabungkan material premium dengan presisi tingkat tinggi untuk setiap mahakarya.',
@@ -94,9 +94,9 @@ export default async function Home() {
       { text: 'Konsultasi Desain', href: `https://wa.me/${adminCtaPhone}`, variant: 'outline' as const },
     ],
     stats: [
-      { value: '2.5K+', label: 'Klien Puas', icon: <Users className="h-5 w-5 text-[#E89B7E]" /> },
-      { value: '15+', label: 'Penjahit Ahli', icon: <Scissors className="h-5 w-5 text-[#E89B7E]" /> },
-      { value: '100+', label: 'Koleksi Kain', icon: <Shirt className="h-5 w-5 text-[#E89B7E]" /> },
+      { value: '2.5K+', label: 'Klien Puas', icon: <Users className="h-5 w-5 text-[#A65D43]" /> },
+      { value: '15+', label: 'Penjahit Ahli', icon: <Scissors className="h-5 w-5 text-[#A65D43]" /> },
+      { value: '100+', label: 'Koleksi Kain', icon: <Shirt className="h-5 w-5 text-[#A65D43]" /> },
     ],
     images: activeImages,
   };

@@ -121,7 +121,7 @@ export default function Navbar() {
                   className={`font-[family-name:var(--font-inter)] text-[13.5px] font-semibold
                               tracking-[0.015em] transition-all duration-200 active:scale-95
                               ${isActive
-                                ? 'text-[#E89B7E]'
+                                ? 'text-[#A65D43]'
                                 : 'text-slate-600 hover:opacity-60'
                               }`}
                 >
@@ -185,7 +185,7 @@ export default function Navbar() {
               <ShoppingBag size={18} strokeWidth={1.5} />
               {cartCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 flex items-center justify-center
-                                 min-w-[8px] h-[8px] rounded-full bg-[#E89B7E] ring-[1.5px] ring-white" />
+                                 min-w-[8px] h-[8px] rounded-full bg-[#A65D43] ring-[1.5px] ring-white" />
               )}
             </Link>
           </div>
@@ -215,7 +215,7 @@ export default function Navbar() {
                             w-12 h-12 rounded-2xl
                             transition-all duration-200 active:scale-90
                             ${isActive
-                              ? 'text-[#E89B7E]'
+                              ? 'text-[#A65D43]'
                               : 'text-slate-500 hover:text-slate-800 hover:bg-black/[0.04]'
                             }`}
               >
@@ -225,10 +225,10 @@ export default function Navbar() {
                 </span>
                 {isCart && cartCount > 0 && (
                   <span className="absolute top-2 right-2 flex items-center justify-center
-                                   min-w-[6px] h-[6px] rounded-full bg-[#E89B7E]" />
+                                   min-w-[6px] h-[6px] rounded-full bg-[#A65D43]" />
                 )}
                 {isActive && (
-                  <span className="absolute bottom-1 h-[3px] w-[3px] rounded-full bg-[#E89B7E]" />
+                  <span className="absolute bottom-1 h-[3px] w-[3px] rounded-full bg-[#A65D43]" />
                 )}
               </Link>
             );
