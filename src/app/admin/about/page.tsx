@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { UserCircle, Save, CheckCircle, Loader2 } from 'lucide-react';
 import { AdminAboutEditor, AboutPerson } from '@/components/admin/AdminAboutComponents';
 import { supabase } from '@/lib/supabase';
+import { compressAndConvertToWebp } from '@/lib/imageCompressor';
 
 export default function AdminAboutPage() {
   const [persons, setPersons] = useState<AboutPerson[]>([]);
@@ -74,13 +75,14 @@ export default function AdminAboutPage() {
   // Helper function to upload file to Supabase Storage
   const uploadToStorage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      // Kompres dan ubah ke format WebP
+      const compressedFile = await compressAndConvertToWebp(file);
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `profiles/${fileName}`;
 
       const { data, error } = await supabase.storage
         .from('about-me-photos')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });

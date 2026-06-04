@@ -8,6 +8,7 @@ import {
   ClientData, ClientFormData
 } from '@/components/admin/AdminClientComponents';
 import { supabase } from '@/lib/supabase';
+import { compressAndConvertToWebp } from '@/lib/imageCompressor';
 
 export default function AdminClientPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
@@ -72,13 +73,14 @@ export default function AdminClientPage() {
   // Helper function to upload logo to Supabase Storage
   const uploadToStorage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      // Kompres dan ubah ke format WebP
+      const compressedFile = await compressAndConvertToWebp(file);
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `logos/${fileName}`;
 
       const { data, error } = await supabase.storage
         .from('client-logos')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });

@@ -7,6 +7,7 @@ import {
   AdminProductCard, ProductFormModal, DeleteProductModal, ProductData,
 } from '@/components/admin/AdminProductComponents';
 import { supabase } from '@/lib/supabase';
+import { compressAndConvertToWebp } from '@/lib/imageCompressor';
 
 const DEFAULT_CATEGORIES = ['Material Kain', 'Jasa Tailoring', 'Ready to Wear', 'Aksesoris'];
 
@@ -129,19 +130,21 @@ export default function AdminProductPage() {
   // Helper upload file ke storage bucket 'product-images'
   const uploadFileToStorage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      // Kompres dan ubah ke format WebP
+      const compressedFile = await compressAndConvertToWebp(file);
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `catalog/${fileName}`;
 
       const { data, error } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });
 
       if (error) {
         console.error('Error uploading file:', error.message);
+        alert(`Gagal mengunggah gambar ke Storage: ${error.message}`);
         return null;
       }
 
@@ -150,8 +153,9 @@ export default function AdminProductPage() {
         .getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error uploading file to storage:', err);
+      alert(err.message || 'Gagal memproses gambar.');
       return null;
     }
   };

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Image as ImageIcon, Loader2 } from 'lucide-react';
 import { HeroImageGrid, HeroImage } from '@/components/admin/AdminHeroComponents';
 import { supabase } from '@/lib/supabase';
+import { compressAndConvertToWebp } from '@/lib/imageCompressor';
 
 export default function AdminHeroPage() {
   const [images, setImages] = useState<HeroImage[]>([]);
@@ -45,13 +46,14 @@ export default function AdminHeroPage() {
   // Helper function to upload file to Supabase Storage
   const uploadToStorage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      // Kompres dan ubah ke format WebP
+      const compressedFile = await compressAndConvertToWebp(file);
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `hero-uploads/${fileName}`;
 
       const { data, error } = await supabase.storage
         .from('hero-images')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });

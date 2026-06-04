@@ -7,6 +7,7 @@ import {
   ReviewCard, ReviewFormModal, DeleteReviewModal, ReviewData, ReviewFormData
 } from '@/components/admin/AdminReviewComponents';
 import { supabase } from '@/lib/supabase';
+import { compressAndConvertToWebp } from '@/lib/imageCompressor';
 
 const emptyForm = (): ReviewFormData => ({ name: '', role: '', avatarUrl: '', message: '' });
 
@@ -72,13 +73,14 @@ export default function AdminReviewPage() {
   // Helper to upload avatar image to storage
   const uploadToStorage = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      // Kompres dan ubah ke format WebP
+      const compressedFile = await compressAndConvertToWebp(file);
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.webp`;
       const filePath = `avatars/${fileName}`;
 
       const { data, error } = await supabase.storage
         .from('testimonials')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });
