@@ -22,7 +22,7 @@
 
 /* ── Focus indicator global (keyboard navigation) ── */
 :focus-visible {
-  outline: 2px solid #A47251;
+  outline: 2px solid #8B5E3C;
   outline-offset: 2px;
   border-radius: 4px;
 }

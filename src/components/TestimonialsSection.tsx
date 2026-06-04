@@ -1,14 +1,15 @@
 'use client';
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import SoftGradient from "@/components/SoftGradient";
+import { supabase } from "@/lib/supabase";
 
 // ==========================================
-// 1. DATA DUMMY TESTIMONIALS (Tema Tailor)
+// 1. DATA DUMMY TESTIMONIALS (Tema Tailor - Fallback)
 // ==========================================
-const testimonials = [
+const FALLBACK_TESTIMONIALS = [
   {
     text: "Pengerjaan jas untuk pernikahan saya sangat rapi. Ukurannya pas di badan dan bahannya sangat nyaman dipakai seharian. Terima kasih TailorCraft!",
     image: "https://randomuser.me/api/portraits/men/32.jpg",
@@ -65,17 +66,12 @@ const testimonials = [
   },
 ];
 
-// Membagi data menjadi 3 kolom
-const firstColumn = testimonials.slice(0, 3);
-const secondColumn = testimonials.slice(3, 6);
-const thirdColumn = testimonials.slice(6, 9);
-
 // ==========================================
 // 2. KOMPONEN KOLOM ANIMASI
 // ==========================================
 const TestimonialsColumn = (props: {
   className?: string;
-  testimonials: typeof testimonials;
+  testimonials: typeof FALLBACK_TESTIMONIALS;
   duration?: number;
 }) => {
   return (
@@ -83,7 +79,7 @@ const TestimonialsColumn = (props: {
       <motion.div
         animate={{ translateY: "-50%" }}
         transition={{
-          duration: props.duration || 15, // Disesuaikan agar tidak terlalu cepat
+          duration: props.duration || 15,
           repeat: Infinity,
           ease: "linear",
           repeatType: "loop",
@@ -104,13 +100,18 @@ const TestimonialsColumn = (props: {
                   "{text}"
                 </div>
                 <div className="flex items-center gap-4">
-                  <img
-                    src={image}
-                    alt={name}
-                    className="h-12 w-12 rounded-full object-cover border-2 border-tailor-surface"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-tailor-surface shrink-0 bg-slate-50 flex items-center justify-center">
+                    {image ? (
+                      <img
+                        src={image}
+                        alt={name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="font-[family-name:var(--font-inter)] font-bold text-sm text-[#8B5E3C]">{name.charAt(0)}</span>
+                    )}
+                  </div>
                   <div className="flex flex-col">
                     <div className="font-[family-name:var(--font-inter)] font-semibold text-slate-800 tracking-wide">{name}</div>
                     <div className="font-[family-name:var(--font-inter)] text-xs text-tailor-primary font-medium">{role}</div>
@@ -129,6 +130,47 @@ const TestimonialsColumn = (props: {
 // 3. KOMPONEN UTAMA (Export)
 // ==========================================
 export default function TestimonialsSection() {
+  const [dbTestimonials, setDbTestimonials] = useState<typeof FALLBACK_TESTIMONIALS>([]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('testimonials')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!error && data && data.length > 0) {
+          setDbTestimonials(data.map(r => ({
+            text: r.message,
+            image: r.avatar_url || '',
+            name: r.name,
+            role: r.role || 'Pelanggan'
+          })));
+        } else {
+          setDbTestimonials(FALLBACK_TESTIMONIALS);
+        }
+      } catch (err) {
+        console.error("Error loading testimonials from Supabase:", err);
+        setDbTestimonials(FALLBACK_TESTIMONIALS);
+      }
+    };
+    fetchReviews();
+  }, []);
+
+  const list = dbTestimonials.length > 0 ? dbTestimonials : FALLBACK_TESTIMONIALS;
+
+  // Membagi data ulasan menjadi 3 kolom secara merata secara interleaved
+  const col1: typeof FALLBACK_TESTIMONIALS = [];
+  const col2: typeof FALLBACK_TESTIMONIALS = [];
+  const col3: typeof FALLBACK_TESTIMONIALS = [];
+
+  list.forEach((item, idx) => {
+    if (idx % 3 === 0) col1.push(item);
+    else if (idx % 3 === 1) col2.push(item);
+    else col3.push(item);
+  });
+
   return (
     <section className="py-12 bg-slate-50/50 relative overflow-hidden">
       <SoftGradient variant="testimonials" />
@@ -158,13 +200,13 @@ export default function TestimonialsSection() {
         {/* Area Kolom Animasi dengan Masking Atas-Bawah */}
         <div className="flex justify-center gap-6 [mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)] h-[600px] md:h-[700px] overflow-hidden">
           {/* Kolom 1 (Tampil di semua layar) */}
-          <TestimonialsColumn testimonials={firstColumn} duration={25} />
+          {col1.length > 0 && <TestimonialsColumn testimonials={col1} duration={25} />}
           
           {/* Kolom 2 (Disembunyikan di HP, tampil di Tablet/Desktop) */}
-          <TestimonialsColumn testimonials={secondColumn} className="hidden md:block" duration={30} />
+          {col2.length > 0 && <TestimonialsColumn testimonials={col2} className="hidden md:block" duration={30} />}
           
           {/* Kolom 3 (Disembunyikan di HP/Tablet, tampil di Desktop) */}
-          <TestimonialsColumn testimonials={thirdColumn} className="hidden lg:block" duration={22} />
+          {col3.length > 0 && <TestimonialsColumn testimonials={col3} className="hidden lg:block" duration={22} />}
         </div>
       </div>
       

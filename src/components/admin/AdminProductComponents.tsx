@@ -2,9 +2,21 @@
 
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Trash2, X, Image as ImageIcon, Plus, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, X, Image as ImageIcon, Plus, ChevronDown, Upload } from 'lucide-react';
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type ProductDetail = { label: string; value: string };
+
+export type ProductColorVariant = {
+  color: string;
+  image: string;       // URL or local object URL
+  newImageFile?: File; // For upload
+};
+
+export type ProductSizeVariant = {
+  size: string;
+  image: string;       // URL or local object URL
+  newImageFile?: File; // For upload
+};
 
 export type ProductData = {
   id: string;
@@ -12,9 +24,11 @@ export type ProductData = {
   category: string;
   price: number;
   unit: string;
-  images: string[];          // maks 4 gambar
+  images: string[];          // max 4 images
   description: string;
   details: ProductDetail[];  // detail spesifik custom
+  colors: ProductColorVariant[];
+  sizes: ProductSizeVariant[];
 };
 
 const MAX_IMAGES   = 4;
@@ -22,6 +36,10 @@ const MAX_FILE_MB  = 2;
 
 const formatRupiah = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+
+const formatPriceWithDots = (val: number) => {
+  return new Intl.NumberFormat('id-ID').format(val);
+};
 
 // ─── Dropdown + Tambah ────────────────────────────────────────────────────────
 function DropdownWithAdd({
@@ -40,7 +58,7 @@ function DropdownWithAdd({
   const inputClass =
     "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] transition-all";
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
 
   return (
     <div className="relative">
@@ -51,7 +69,7 @@ function DropdownWithAdd({
           className={`flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl border
                       font-[family-name:var(--font-inter)] text-sm transition-all min-w-0
                       ${value ? 'text-slate-800' : 'text-slate-400'}
-                      ${open ? 'border-[#A47251] ring-2 ring-[#A47251]/30' : 'border-slate-200 bg-slate-50/50'}`}
+                      ${open ? 'border-[#8B5E3C] ring-2 ring-[#8B5E3C]/30' : 'border-slate-200 bg-slate-50/50'}`}
         >
           <span className="truncate">{value || placeholder}</span>
           <ChevronDown size={15} strokeWidth={1.5} className={`text-slate-400 transition-transform shrink-0 ml-1 ${open ? 'rotate-180' : ''}`} />
@@ -61,8 +79,8 @@ function DropdownWithAdd({
           type="button"
           onClick={() => setOpen(true)}
           title="Tambah opsi baru"
-          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-xl border border-dashed border-[#A47251]/50
-                     text-[#A47251] hover:bg-[#F0D8A1]/20 transition-all active:scale-90"
+          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-xl border border-dashed border-[#8B5E3C]/50
+                     text-[#8B5E3C] hover:bg-[#F0D8A1]/20 transition-all active:scale-90"
         >
           <Plus size={16} strokeWidth={2} />
         </button>
@@ -84,7 +102,7 @@ function DropdownWithAdd({
                     onClick={() => { onChange(opt); setOpen(false); }}
                     className={`flex-1 text-left px-4 py-3 font-[family-name:var(--font-inter)] text-[14px]
                                 transition-colors
-                                ${value === opt ? 'text-[#A47251] font-semibold bg-[#F0D8A1]/10' : 'text-slate-700'}`}
+                                ${value === opt ? 'text-[#8B5E3C] font-semibold bg-[#F0D8A1]/10' : 'text-slate-700'}`}
                   >
                     {opt}
                   </button>
@@ -137,7 +155,7 @@ function DropdownWithAdd({
                     setOpen(false);
                   }
                 }}
-                className="px-3 rounded-xl bg-[#A47251] text-white font-[family-name:var(--font-inter)]
+                className="px-3 rounded-xl bg-[#8B5E3C] text-white font-[family-name:var(--font-inter)]
                            text-[12px] font-semibold hover:bg-[#DD9E59] transition-all active:scale-95 shrink-0"
               >
                 Tambah
@@ -152,8 +170,12 @@ function DropdownWithAdd({
 
 // ─── Multi Image Upload ───────────────────────────────────────────────────────
 function MultiImageUpload({
-  images, onChange,
-}: { images: string[]; onChange: (imgs: string[]) => void }) {
+  images, newFiles = [], onChange,
+}: { 
+  images: string[]; 
+  newFiles?: File[]; 
+  onChange: (imgs: string[], files: File[]) => void 
+}) {
   const [error, setError] = useState('');
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,12 +195,26 @@ function MultiImageUpload({
     }
 
     const urls = files.map(f => URL.createObjectURL(f));
-    onChange([...images, ...urls]);
+    onChange([...images, ...urls], [...newFiles, ...files]);
     e.target.value = '';
   };
 
   const removeImage = (idx: number) => {
-    onChange(images.filter((_, i) => i !== idx));
+    const removedUrl = images[idx];
+    const isBlob = removedUrl.startsWith('blob:');
+    
+    let updatedFiles = [...newFiles];
+    if (isBlob) {
+      const blobIndices = images
+        .map((url, i) => ({ url, i }))
+        .filter(item => item.url.startsWith('blob:'));
+      const fileIdx = blobIndices.findIndex(item => item.i === idx);
+      if (fileIdx !== -1) {
+        updatedFiles.splice(fileIdx, 1);
+      }
+    }
+    
+    onChange(images.filter((_, i) => i !== idx), updatedFiles);
   };
 
   return (
@@ -209,7 +245,7 @@ function MultiImageUpload({
         {images.length < MAX_IMAGES && (
           <label className="aspect-square rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50
                             flex flex-col items-center justify-center cursor-pointer
-                            hover:border-[#A47251] hover:bg-[#F0D8A1]/10 transition-all">
+                            hover:border-[#8B5E3C] hover:bg-[#F0D8A1]/10 transition-all">
             <ImageIcon size={18} strokeWidth={1.5} className="text-slate-400 mb-1" />
             <span className="font-[family-name:var(--font-inter)] text-[10px] text-slate-400">
               {images.length}/{MAX_IMAGES}
@@ -242,7 +278,7 @@ function DetailsEditor({
   const inputClass =
     "w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-[12px] text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] transition-all";
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
 
   return (
     <div className="space-y-2">
@@ -281,8 +317,8 @@ function DetailsEditor({
 
       <button
         type="button" onClick={add}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-[#A47251]/40
-                   font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#A47251]
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-[#8B5E3C]/40
+                   font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#8B5E3C]
                    hover:bg-[#F0D8A1]/20 transition-all active:scale-95"
       >
         <Plus size={13} strokeWidth={2} /> Tambah Detail
@@ -314,7 +350,7 @@ export function AdminProductCard({
           : <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon size={32} strokeWidth={1} /></div>
         }
         <span className="absolute top-3 left-3 px-3 py-1 rounded-full text-[11px] font-semibold
-                         bg-white/90 backdrop-blur-md text-[#A47251] shadow-sm">
+                         bg-white/90 backdrop-blur-md text-[#8B5E3C] shadow-sm">
           {product.category}
         </span>
         {product.images.length > 1 && (
@@ -330,7 +366,7 @@ export function AdminProductCard({
           {product.name}
         </h3>
         <div className="flex items-baseline gap-1 mb-2">
-          <span className="font-[family-name:var(--font-inter)] font-bold text-[#A47251] text-[15px]">
+          <span className="font-[family-name:var(--font-inter)] font-bold text-[#8B5E3C] text-[15px]">
             {formatRupiah(product.price)}
           </span>
           <span className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400">{product.unit}</span>
@@ -345,7 +381,7 @@ export function AdminProductCard({
             className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl
                        font-[family-name:var(--font-inter)] text-[12px] font-semibold
                        border border-slate-200 text-slate-600
-                       hover:border-[#A47251] hover:text-[#A47251] transition-all active:scale-95">
+                       hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all active:scale-95">
             <Pencil size={13} strokeWidth={1.5} /> Edit
           </button>
           <button onClick={() => onDelete(product.id)}
@@ -359,6 +395,212 @@ export function AdminProductCard({
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function ColorsEditor({
+  colors, onChange
+}: { colors: ProductColorVariant[]; onChange: (c: ProductColorVariant[]) => void }) {
+  const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+
+  const add = () => onChange([...colors, { color: '', image: '' }]);
+  const remove = (i: number) => onChange(colors.filter((_, idx) => idx !== i));
+  const updateText = (i: number, val: string) => {
+    onChange(colors.map((c, idx) => idx === i ? { ...c, color: val } : c));
+  };
+  const handleFileChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    onChange(colors.map((c, idx) => idx === i ? { ...c, image: url, newImageFile: file } : c));
+  };
+
+  const removePhoto = (i: number) => {
+    onChange(colors.map((c, idx) => idx === i ? { ...c, image: '', newImageFile: undefined } : c));
+  };
+
+  const inputClass =
+    "w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 " +
+    "font-[family-name:var(--font-inter)] text-[12px] text-slate-800 placeholder:text-slate-400 " +
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
+
+  return (
+    <div className="space-y-3">
+      <AnimatePresence>
+        {colors.map((c, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="flex flex-col gap-2 p-3 bg-white rounded-xl border border-slate-100 shadow-sm"
+          >
+            <div className="flex gap-2 items-center">
+              <input
+                type="text" placeholder="Nama warna (cth: Merah)"
+                value={c.color}
+                required
+                onChange={e => updateText(i, e.target.value)}
+                className={`${inputClass} flex-1`}
+              />
+              <button
+                type="button" onClick={() => remove(i)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-red-400
+                           hover:bg-red-55 hover:text-red-600 transition-all active:scale-90 shrink-0"
+              >
+                <Trash2 size={14} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Upload Foto untuk warna ini */}
+            <div className="flex items-center gap-3">
+              {c.image ? (
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                  <img src={c.image} alt={c.color} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center scale-75 cursor-pointer"
+                  >
+                    <X size={10} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRefs.current[i]?.click()}
+                  className="w-12 h-12 rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all shrink-0 cursor-pointer"
+                >
+                  <Upload size={16} strokeWidth={1.5} />
+                </button>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                ref={el => { fileInputRefs.current[i] = el; }}
+                onChange={e => handleFileChange(i, e)}
+                className="hidden"
+              />
+              <span className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400">
+                {c.image ? 'Foto tersemat' : 'Unggah foto untuk warna ini (opsional)'}
+              </span>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <button
+        type="button" onClick={add}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-[#8B5E3C]/40
+                   font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#8B5E3C]
+                   hover:bg-[#F0D8A1]/20 transition-all active:scale-95 cursor-pointer"
+      >
+        <Plus size={13} strokeWidth={2} /> Tambah Warna
+      </button>
+    </div>
+  );
+}
+
+function SizesEditor({
+  sizes, onChange
+}: { sizes: ProductSizeVariant[]; onChange: (s: ProductSizeVariant[]) => void }) {
+  const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
+
+  const add = () => onChange([...sizes, { size: '', image: '' }]);
+  const remove = (i: number) => onChange(sizes.filter((_, idx) => idx !== i));
+  const updateText = (i: number, val: string) => {
+    onChange(sizes.map((s, idx) => idx === i ? { ...s, size: val } : s));
+  };
+  const handleFileChange = (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    onChange(sizes.map((s, idx) => idx === i ? { ...s, image: url, newImageFile: file } : s));
+  };
+
+  const removePhoto = (i: number) => {
+    onChange(sizes.map((s, idx) => idx === i ? { ...s, image: '', newImageFile: undefined } : s));
+  };
+
+  const inputClass =
+    "w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 " +
+    "font-[family-name:var(--font-inter)] text-[12px] text-slate-800 placeholder:text-slate-400 " +
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
+
+  return (
+    <div className="space-y-3">
+      <AnimatePresence>
+        {sizes.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="flex flex-col gap-2 p-3 bg-white rounded-xl border border-slate-100 shadow-sm"
+          >
+            <div className="flex gap-2 items-center">
+              <input
+                type="text" placeholder="Nama ukuran (cth: Besar, S, M, L)"
+                value={s.size}
+                required
+                onChange={e => updateText(i, e.target.value)}
+                className={`${inputClass} flex-1`}
+              />
+              <button
+                type="button" onClick={() => remove(i)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-red-400
+                           hover:bg-red-55 hover:text-red-600 transition-all active:scale-90 shrink-0"
+              >
+                <Trash2 size={14} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Upload Foto untuk ukuran ini */}
+            <div className="flex items-center gap-3">
+              {s.image ? (
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                  <img src={s.image} alt={s.size} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center scale-75 cursor-pointer"
+                  >
+                    <X size={10} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRefs.current[i]?.click()}
+                  className="w-12 h-12 rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all shrink-0 cursor-pointer"
+                >
+                  <Upload size={16} strokeWidth={1.5} />
+                </button>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                ref={el => { fileInputRefs.current[i] = el; }}
+                onChange={e => handleFileChange(i, e)}
+                className="hidden"
+              />
+              <span className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400">
+                {s.image ? 'Foto tersemat' : 'Unggah foto untuk ukuran ini (opsional)'}
+              </span>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <button
+        type="button" onClick={add}
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-[#8B5E3C]/40
+                   font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#8B5E3C]
+                   hover:bg-[#F0D8A1]/20 transition-all active:scale-95 cursor-pointer"
+      >
+        <Plus size={13} strokeWidth={2} /> Tambah Ukuran
+      </button>
+    </div>
   );
 }
 
@@ -385,7 +627,7 @@ export function ProductFormModal({
   const inputClass =
     "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] transition-all";
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
 
   const labelClass = "block font-[family-name:var(--font-inter)] text-[12px] font-semibold text-slate-700 mb-1";
 
@@ -442,23 +684,61 @@ export function ProductFormModal({
               {/* Harga */}
               <div>
                 <label className={labelClass}>Harga (Rp) *</label>
-                <input type="number" required placeholder="85000" min={0}
-                  value={formData.price || ''}
-                  onChange={e => setFormData(p => ({ ...p, price: Number(e.target.value) }))}
+                <input type="text" required placeholder="85.000"
+                  value={formData.price === 0 ? '' : formatPriceWithDots(formData.price)}
+                  onChange={e => {
+                    const clean = e.target.value.replace(/\D/g, '');
+                    setFormData(p => ({ ...p, price: clean ? Number(clean) : 0 }));
+                  }}
                   className={inputClass} />
               </div>
 
               {/* Satuan — di bawah Harga */}
               <div>
-                <label className={labelClass}>Satuan *</label>
-                <DropdownWithAdd
-                  value={formData.unit}
-                  options={units}
-                  onChange={v => setFormData(p => ({ ...p, unit: v }))}
-                  onAdd={onAddUnit}
-                  onRemove={onRemoveUnit}
-                  placeholder="Pilih satuan"
-                />
+                <label className={labelClass}>Satuan * (Bisa pilih lebih dari satu)</label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {units.map(unitOption => {
+                    const selectedUnits = formData.unit ? formData.unit.split(',').map(u => u.trim()) : [];
+                    const isSelected = selectedUnits.includes(unitOption);
+                    return (
+                      <button
+                        key={unitOption}
+                        type="button"
+                        onClick={() => {
+                          let nextUnits;
+                          if (isSelected) {
+                            nextUnits = selectedUnits.filter(u => u !== unitOption);
+                          } else {
+                            nextUnits = [...selectedUnits, unitOption];
+                          }
+                          setFormData(p => ({ ...p, unit: nextUnits.join(', ') }));
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl font-[family-name:var(--font-inter)] text-[12px] font-semibold transition-all cursor-pointer active:scale-95 border
+                                    ${isSelected
+                                      ? 'border-[#8B5E3C] bg-[#8B5E3C]/5 text-[#8B5E3C] shadow-sm'
+                                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                                    }`}
+                      >
+                        {unitOption}
+                      </button>
+                    );
+                  })}
+                  
+                  {/* Tombol tambah satuan baru */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newUnitName = prompt("Masukkan nama satuan baru (cth: /roll):");
+                      if (newUnitName && newUnitName.trim()) {
+                        const formattedUnit = newUnitName.trim().startsWith('/') ? newUnitName.trim() : '/' + newUnitName.trim();
+                        onAddUnit(formattedUnit);
+                      }
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl font-[family-name:var(--font-inter)] text-[12px] font-semibold transition-all border border-dashed border-[#8B5E3C]/50 text-[#8B5E3C] hover:bg-[#F0D8A1]/20 active:scale-90"
+                  >
+                    + Tambah Satuan
+                  </button>
+                </div>
               </div>
 
               {/* Gambar */}
@@ -466,7 +746,8 @@ export function ProductFormModal({
                 <label className={labelClass}>Gambar Produk (maks {MAX_IMAGES})</label>
                 <MultiImageUpload
                   images={formData.images}
-                  onChange={imgs => setFormData(p => ({ ...p, images: imgs }))}
+                  newFiles={(formData as any).newImageFiles || []}
+                  onChange={(imgs, files) => setFormData(p => ({ ...p, images: imgs, newImageFiles: files } as any))}
                 />
               </div>
 
@@ -490,6 +771,28 @@ export function ProductFormModal({
                 />
               </div>
 
+              {/* Pilihan Warna */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                <p className="font-[family-name:var(--font-inter)] text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Pilihan Warna + Foto (Opsional)
+                </p>
+                <ColorsEditor
+                  colors={formData.colors || []}
+                  onChange={c => setFormData(p => ({ ...p, colors: c }))}
+                />
+              </div>
+
+              {/* Pilihan Ukuran */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                <p className="font-[family-name:var(--font-inter)] text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Pilihan Ukuran + Foto (Opsional)
+                </p>
+                <SizesEditor
+                  sizes={formData.sizes || []}
+                  onChange={s => setFormData(p => ({ ...p, sizes: s }))}
+                />
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onClose}
                   className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600
@@ -498,7 +801,7 @@ export function ProductFormModal({
                   Batal
                 </button>
                 <button type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#A47251] text-white
+                  className="flex-1 py-2.5 rounded-xl bg-[#8B5E3C] text-white
                              font-[family-name:var(--font-inter)] text-[13px] font-semibold
                              hover:bg-[#DD9E59] transition-all active:scale-95
                              shadow-[0_2px_8px_rgba(164,114,81,0.25)]">

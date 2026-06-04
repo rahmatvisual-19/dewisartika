@@ -121,10 +121,36 @@ function InfiniteSlider({
   );
 }
 
+import { supabase } from '@/lib/supabase';
+
 // ==========================================
 // 3. KOMPONEN LOGO CLOUD UTAMA (Export)
 // ==========================================
 export function LogoCloud({ className }: { className?: string }) {
+  const [activeLogos, setActiveLogos] = useState<Logo[]>(logos);
+
+  useEffect(() => {
+    const fetchLogos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('name, logo_url')
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          setActiveLogos(data.map(item => ({
+            src: item.logo_url,
+            alt: item.name
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching client logos from Supabase:', err);
+      }
+    };
+
+    fetchLogos();
+  }, []);
+
   return (
     <div className={cn("relative w-full overflow-hidden py-6", className)}>
       <SoftGradient variant="clients" />
@@ -145,18 +171,59 @@ export function LogoCloud({ className }: { className?: string }) {
         {/* Pemanggilan Slider + Mapping Data */}
         <div className="overflow-hidden py-4 [mask-image:linear-gradient(to_right,transparent,black,transparent)]">
           <InfiniteSlider gap={42} reverse duration={40} durationOnHover={80}>
-            {logos.map((logo) => (
-              <img
-                key={`logo-${logo.alt}`}
-                alt={logo.alt}
-                src={logo.src}
-                width={logo.width || "auto"}
-                height={logo.height || "auto"}
-                loading="lazy"
-                decoding="async"
-                className="pointer-events-none h-4 md:h-5 select-none opacity-60 transition-opacity duration-200 hover:opacity-100"
-              />
-            ))}
+            {activeLogos.map((logo) => {
+              const isFallback = logo.src?.startsWith('https://svgl.app');
+              const hasImage = !!logo.src && logo.src.trim() !== '';
+              const hasText = !!logo.alt && logo.alt.trim() !== '';
+
+              if (hasImage) {
+                if (hasText && !isFallback) {
+                  // Tampilkan dua-duanya (Logo + Nama Klien berdampingan)
+                  return (
+                    <div
+                      key={`logo-group-${logo.alt}`}
+                      className="flex items-center gap-2.5 select-none opacity-60 hover:opacity-100 transition-opacity duration-200 self-center"
+                    >
+                      <img
+                        alt={logo.alt}
+                        src={logo.src}
+                        className="pointer-events-none h-5 md:h-6 object-contain"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <span className="font-[family-name:var(--font-inter)] font-bold text-[13px] md:text-[14px] text-slate-800 whitespace-nowrap">
+                        {logo.alt}
+                      </span>
+                    </div>
+                  );
+                } else {
+                  // Tampilkan logo saja (untuk fallback atau jika tidak ada nama)
+                  return (
+                    <img
+                      key={`logo-${logo.alt}`}
+                      alt={logo.alt}
+                      src={logo.src}
+                      width={logo.width || "auto"}
+                      height={logo.height || "auto"}
+                      loading="lazy"
+                      decoding="async"
+                      className="pointer-events-none h-4 md:h-5 select-none opacity-60 transition-opacity duration-200 hover:opacity-100 object-contain self-center"
+                    />
+                  );
+                }
+              } else if (hasText) {
+                // Tampilkan teks saja, tebal (bold), tanpa gambar sama sekali
+                return (
+                  <span
+                    key={`logo-txt-${logo.alt}`}
+                    className="font-[family-name:var(--font-inter)] font-bold text-[14px] md:text-[16px] text-slate-800 select-none opacity-60 hover:opacity-100 transition-opacity duration-200 whitespace-nowrap self-center"
+                  >
+                    {logo.alt}
+                  </span>
+                );
+              }
+              return null;
+            })}
           </InfiniteSlider>
         </div>
 

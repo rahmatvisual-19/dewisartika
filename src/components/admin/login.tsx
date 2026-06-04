@@ -4,35 +4,47 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Lock, User, ArrowLeft, Loader2 } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function Login() {
   const router = useRouter();
-  const [username, setUsername]   = useState('');
+  const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError]         = useState('');
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulasi autentikasi — ganti dengan Supabase Auth nanti
-    setTimeout(() => {
-      if (username === 'admin' && password === 'admin123') {
-        router.push('/admin');
-      } else {
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message === 'Invalid login credentials' 
+          ? 'Email atau kata sandi salah.' 
+          : authError.message
+        );
         setIsLoading(false);
-        setError('Username atau kata sandi salah.');
+      } else if (data.session) {
+        router.push('/admin');
       }
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+      setError('Terjadi kesalahan koneksi.');
+      setIsLoading(false);
+    }
   };
 
   const inputClass =
     "w-full pl-10 pr-4 py-3 h-12 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] " +
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] " +
     "transition-all duration-200";
 
   return (
@@ -42,7 +54,7 @@ export default function Login() {
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 font-[family-name:var(--font-inter)] text-[13px]
-                   text-slate-500 hover:text-[#A47251] transition-colors mb-6 ml-1"
+                   text-slate-500 hover:text-[#8B5E3C] transition-colors mb-6 ml-1"
       >
         <ArrowLeft size={15} strokeWidth={1.5} /> Kembali ke Beranda
       </Link>
@@ -58,7 +70,7 @@ export default function Login() {
         {/* Header */}
         <div className="text-center mb-10">
           <h1
-            className="font-[family-name:var(--font-instrument-serif)] text-4xl font-normal text-[#A47251] mb-1"
+            className="font-[family-name:var(--font-instrument-serif)] text-4xl font-normal text-[#8B5E3C] mb-1"
             style={{ letterSpacing: '-0.02em' }}
           >
             TailorCraft
@@ -83,21 +95,21 @@ export default function Login() {
           )}
 
           <div>
-            <label htmlFor="username"
+            <label htmlFor="email"
               className="block font-[family-name:var(--font-inter)] text-[13px] font-semibold text-slate-700 mb-1.5">
-              Username
+              Email
             </label>
             <div className="relative">
               <input
-                type="text" id="username"
-                placeholder="Masukkan username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
+                type="email" id="email"
+                placeholder="Masukkan email admin"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 required
                 suppressHydrationWarning
                 className={inputClass}
               />
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} strokeWidth={1.5} />
             </div>
           </div>
 
@@ -126,7 +138,7 @@ export default function Login() {
             suppressHydrationWarning
             className="w-full h-12 inline-flex items-center justify-center gap-2 mt-2
                        font-[family-name:var(--font-inter)] text-[14px] font-semibold
-                       bg-[#A47251] text-white rounded-xl
+                       bg-[#8B5E3C] text-white rounded-xl
                        hover:bg-[#DD9E59] disabled:opacity-70 disabled:cursor-not-allowed
                        transition-all duration-300 active:scale-[0.98]
                        shadow-[0_4px_16px_rgba(164,114,81,0.25)]"
@@ -137,8 +149,8 @@ export default function Login() {
             }
           </button>
 
-          <p className="font-[family-name:var(--font-inter)] text-[11px] text-center text-slate-400">
-            Demo: username <strong>admin</strong> / password <strong>admin123</strong>
+          <p className="font-[family-name:var(--font-inter)] text-[11.5px] text-center text-slate-400">
+            Gunakan akun email admin yang sudah Anda buat di dasbor Supabase.
           </p>
         </form>
       </motion.div>

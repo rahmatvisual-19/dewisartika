@@ -85,7 +85,7 @@ function ProductCard({ product }: { product: typeof ALL_PRODUCTS[0] }) {
 
       {/* Info */}
       <div className="px-1 flex flex-col flex-grow">
-        <Link href={`/katalog/${product.id}`} className="hover:text-[#A47251] transition-colors">
+        <Link href={`/katalog/${product.id}`} className="hover:text-[#8B5E3C] transition-colors">
           <h3 className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 leading-snug mb-1">
             {product.name}
           </h3>
@@ -96,7 +96,7 @@ function ProductCard({ product }: { product: typeof ALL_PRODUCTS[0] }) {
 
         <div className="mt-auto pt-2">
           <div className="flex flex-col">
-            <span className="font-[family-name:var(--font-inter)] font-bold text-[#A47251] text-base leading-tight break-all">
+            <span className="font-[family-name:var(--font-inter)] font-bold text-[#8B5E3C] text-base leading-tight break-all">
               {product.price}
             </span>
             <span className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-slate-400 mt-0.5">
@@ -189,8 +189,8 @@ function DesktopView() {
             className="inline-flex items-center gap-2.5
                        font-[family-name:var(--font-inter)] text-[13.5px] font-semibold
                        px-8 py-3 rounded-2xl
-                       bg-white border border-[#A47251]/30 text-[#A47251]
-                       hover:bg-[#A47251] hover:text-white hover:border-[#A47251]
+                       bg-white border border-[#8B5E3C]/30 text-[#8B5E3C]
+                       hover:bg-[#8B5E3C] hover:text-white hover:border-[#8B5E3C]
                        disabled:opacity-60 disabled:cursor-not-allowed
                        transition-all duration-300 active:scale-95
                        shadow-[0_2px_12px_rgba(164,114,81,0.12)]"
@@ -252,7 +252,7 @@ function TabletView() {
           aria-label="Halaman sebelumnya"
           className="w-9 h-9 flex items-center justify-center rounded-xl
                      border border-slate-200 text-slate-500
-                     hover:border-[#A47251] hover:text-[#A47251]
+                     hover:border-[#8B5E3C] hover:text-[#8B5E3C]
                      disabled:opacity-30 disabled:cursor-not-allowed
                      transition-all duration-200 active:scale-90"
         >
@@ -275,8 +275,8 @@ function TabletView() {
                           font-[family-name:var(--font-inter)] text-[13px] font-semibold
                           transition-all duration-200 active:scale-90
                           ${page === n
-                            ? 'bg-[#A47251] text-white shadow-[0_2px_8px_rgba(164,114,81,0.35)]'
-                            : 'border border-slate-200 text-slate-600 hover:border-[#A47251] hover:text-[#A47251]'
+                            ? 'bg-[#8B5E3C] text-white shadow-[0_2px_8px_rgba(164,114,81,0.35)]'
+                            : 'border border-slate-200 text-slate-600 hover:border-[#8B5E3C] hover:text-[#8B5E3C]'
                           }`}
             >
               {n}
@@ -291,7 +291,7 @@ function TabletView() {
           aria-label="Halaman berikutnya"
           className="w-9 h-9 flex items-center justify-center rounded-xl
                      border border-slate-200 text-slate-500
-                     hover:border-[#A47251] hover:text-[#A47251]
+                     hover:border-[#8B5E3C] hover:text-[#8B5E3C]
                      disabled:opacity-30 disabled:cursor-not-allowed
                      transition-all duration-200 active:scale-90"
         >
@@ -330,7 +330,7 @@ function MobileView() {
           className="inline-flex items-center gap-2.5
                      font-[family-name:var(--font-inter)] text-[13.5px] font-semibold
                      px-7 py-3 rounded-2xl
-                     bg-[#A47251] text-white
+                     bg-[#8B5E3C] text-white
                      hover:bg-[#DD9E59]
                      transition-all duration-300 active:scale-95
                      shadow-[0_4px_16px_rgba(164,114,81,0.30)]"
@@ -401,7 +401,7 @@ export default function ProductShowcase() {
             <Link
               href="/katalog"
               className="font-[family-name:var(--font-inter)] inline-flex items-center gap-2
-                         text-[13.5px] font-semibold text-[#A47251]
+                         text-[13.5px] font-semibold text-[#8B5E3C]
                          hover:text-[#E89B7E] transition-colors duration-200"
             >
               Lihat Semua Katalog <ArrowRight size={16} strokeWidth={1.5} />

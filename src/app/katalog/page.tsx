@@ -1,34 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Frown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Frown, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import CatalogHeader from '@/components/CatalogHeader';
 import ProductCard, { Product } from '@/components/ProductCard';
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-const ALL_PRODUCTS: Product[] = [
-  { id: 1,  name: 'Kain Sutra Premium',        category: 'Material Kain',  price: 'Rp 150.000',   unit: '/meter', image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=800&auto=format&fit=crop' },
-  { id: 2,  name: 'Kancing Jas Eksklusif',     category: 'Aksesoris',      price: 'Rp 85.000',    unit: '/lusin', image: 'https://images.unsplash.com/photo-1556905055-8f358a7a4bb4?q=80&w=800&auto=format&fit=crop' },
-  { id: 3,  name: 'Custom Blazer Linen',       category: 'Jasa Tailoring', price: 'Rp 1.850.000', unit: '/biji',  image: 'https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?q=80&w=800&auto=format&fit=crop' },
-  { id: 4,  name: 'Kemeja Katun Polos',        category: 'Ready to Wear',  price: 'Rp 450.000',   unit: '/biji',  image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop' },
-  { id: 5,  name: 'Kain Wool Italia',          category: 'Material Kain',  price: 'Rp 350.000',   unit: '/meter', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=800&auto=format&fit=crop' },
-  { id: 6,  name: 'Setelan Jas Navy Bespoke',  category: 'Jasa Tailoring', price: 'Rp 4.500.000', unit: '/set',   image: 'https://images.unsplash.com/photo-1605289982774-9a6fef564df8?q=80&w=800&auto=format&fit=crop' },
-  { id: 7,  name: 'Benang Jahit Ekstra Kuat',  category: 'Aksesoris',      price: 'Rp 25.000',    unit: '/lusin', image: 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=800&auto=format&fit=crop' },
-  { id: 8,  name: 'Kebaya Payet Modern',       category: 'Jasa Tailoring', price: 'Rp 2.800.000', unit: '/biji',  image: 'https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?q=80&w=800&auto=format&fit=crop' },
-  { id: 9,  name: 'Kain Batik Tulis Solo',     category: 'Material Kain',  price: 'Rp 320.000',   unit: '/meter', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800&auto=format&fit=crop' },
-  { id: 10, name: 'Celana Chino Slim Fit',     category: 'Ready to Wear',  price: 'Rp 380.000',   unit: '/biji',  image: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?q=80&w=800&auto=format&fit=crop' },
-  { id: 11, name: 'Kancing Mutiara Set',       category: 'Aksesoris',      price: 'Rp 120.000',   unit: '/set',   image: 'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?q=80&w=800&auto=format&fit=crop' },
-  { id: 12, name: 'Polo Shirt Pique',          category: 'Ready to Wear',  price: 'Rp 290.000',   unit: '/biji',  image: 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?q=80&w=800&auto=format&fit=crop' },
-  { id: 13, name: 'Kain Velvet Mewah',         category: 'Material Kain',  price: 'Rp 210.000',   unit: '/meter', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=800&auto=format&fit=crop' },
-  { id: 14, name: 'Jaket Kulit Sintetis',      category: 'Ready to Wear',  price: 'Rp 890.000',   unit: '/biji',  image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=800&auto=format&fit=crop' },
-  { id: 15, name: 'Gaun Pesta Custom',         category: 'Jasa Tailoring', price: 'Rp 2.750.000', unit: '/biji',  image: 'https://images.unsplash.com/photo-1566479179817-c0b5b4b4b1e5?q=80&w=800&auto=format&fit=crop' },
-  { id: 16, name: 'Resleting YKK Premium',     category: 'Aksesoris',      price: 'Rp 25.000',    unit: '/pcs',   image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800&auto=format&fit=crop' },
-  { id: 17, name: 'Jas Formal Wol Italia',     category: 'Jasa Tailoring', price: 'Rp 3.200.000', unit: '/biji',  image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop' },
-  { id: 18, name: 'Kain Denim Premium',        category: 'Material Kain',  price: 'Rp 95.000',    unit: '/meter', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=800&auto=format&fit=crop' },
-  { id: 19, name: 'Dress Kebaya Modern',       category: 'Jasa Tailoring', price: 'Rp 2.100.000', unit: '/biji',  image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=800&auto=format&fit=crop' },
-  { id: 20, name: 'Kemeja Flannel Kotak',      category: 'Ready to Wear',  price: 'Rp 320.000',   unit: '/biji',  image: 'https://images.unsplash.com/photo-1602810316693-3667c854239a?q=80&w=800&auto=format&fit=crop' },
-];
+import { supabase } from '@/lib/supabase';
 
 const CATEGORIES = ['Semua', 'Material Kain', 'Jasa Tailoring', 'Ready to Wear', 'Aksesoris'];
 const DESKTOP_PER_PAGE = 12;
@@ -68,7 +46,7 @@ function PaginationBar({
         onClick={() => onGo(page - 1)} disabled={page === 1}
         aria-label="Sebelumnya"
         className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500
-                   hover:border-[#A47251] hover:text-[#A47251] disabled:opacity-30 disabled:cursor-not-allowed
+                   hover:border-[#8B5E3C] hover:text-[#8B5E3C] disabled:opacity-30 disabled:cursor-not-allowed
                    transition-all duration-200 active:scale-90"
       >
         <ChevronLeft size={16} strokeWidth={2} />
@@ -86,8 +64,8 @@ function PaginationBar({
                         font-[family-name:var(--font-inter)] text-[13px] font-semibold
                         transition-all duration-200 active:scale-90
                         ${page === n
-                          ? 'bg-[#A47251] text-white shadow-[0_2px_8px_rgba(164,114,81,0.35)]'
-                          : 'border border-slate-200 text-slate-600 hover:border-[#A47251] hover:text-[#A47251]'
+                          ? 'bg-[#8B5E3C] text-white shadow-[0_2px_8px_rgba(164,114,81,0.35)]'
+                          : 'border border-slate-200 text-slate-600 hover:border-[#8B5E3C] hover:text-[#8B5E3C]'
                         }`}
           >
             {n}
@@ -99,7 +77,7 @@ function PaginationBar({
         onClick={() => onGo(page + 1)} disabled={page === totalPages}
         aria-label="Berikutnya"
         className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500
-                   hover:border-[#A47251] hover:text-[#A47251] disabled:opacity-30 disabled:cursor-not-allowed
+                   hover:border-[#8B5E3C] hover:text-[#8B5E3C] disabled:opacity-30 disabled:cursor-not-allowed
                    transition-all duration-200 active:scale-90"
       >
         <ChevronRight size={16} strokeWidth={2} />
@@ -179,7 +157,7 @@ function EmptyState({ query, onReset }: { query: string; onReset: () => void }) 
       </p>
       <button
         onClick={onReset}
-        className="px-7 py-3 rounded-2xl bg-[#A47251] text-white
+        className="px-7 py-3 rounded-2xl bg-[#8B5E3C] text-white
                    font-[family-name:var(--font-inter)] text-[13.5px] font-semibold
                    hover:bg-[#DD9E59] transition-all duration-300 active:scale-95"
       >
@@ -190,11 +168,21 @@ function EmptyState({ query, onReset }: { query: string; onReset: () => void }) 
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
-export default function KatalogPage() {
+function KatalogContent() {
+  const searchParams = useSearchParams();
+  const q = searchParams.get('q') || '';
+
+  const [products, setProducts]                 = useState<Product[]>([]);
+  const [loading, setLoading]                   = useState(true);
   const [searchQuery, setSearchQuery]           = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [isMobile, setIsMobile]                 = useState<boolean | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
+
+  // Sinkronisasi kata kunci dari URL (navbar)
+  useEffect(() => {
+    setSearchQuery(q);
+  }, [q]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
@@ -203,7 +191,35 @@ export default function KatalogPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const filtered = ALL_PRODUCTS.filter(p => {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          setProducts(data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(p.price)),
+            unit: p.unit,
+            image: p.images?.[0] || 'https://images.unsplash.com/photo-1556905055-8f358a7a4bb4?q=80&w=800&auto=format&fit=crop',
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const filtered = products.filter(p => {
     const matchCat    = selectedCategory === 'Semua' || p.category === selectedCategory;
     const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         p.category.toLowerCase().includes(searchQuery.toLowerCase());
@@ -213,7 +229,7 @@ export default function KatalogPage() {
   const reset = () => { setSearchQuery(''); setSelectedCategory('Semua'); };
 
   return (
-    <main className="min-h-screen pt-20 pb-16 bg-slate-50/50">
+    <main className="min-h-screen pt-6 md:pt-20 pb-16 bg-slate-50/50">
       <style>{`
         @keyframes shimmer {
           0%   { background-position: 200% 0; }
@@ -233,7 +249,11 @@ export default function KatalogPage() {
           setSelectedCategory={setSelectedCategory}
         />
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState query={searchQuery} onReset={reset} />
         ) : isMobile === null ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -246,5 +266,17 @@ export default function KatalogPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function KatalogPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen pt-6 md:pt-20 pb-16 bg-slate-50/50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#8B5E3C] w-8 h-8" />
+      </main>
+    }>
+      <KatalogContent />
+    </Suspense>
   );
 }

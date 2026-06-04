@@ -1,34 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, Loader2 } from 'lucide-react';
 import {
-  ReviewCard, ReviewFormModal, DeleteReviewModal, ReviewData,
+  ReviewCard, ReviewFormModal, DeleteReviewModal, ReviewData, ReviewFormData
 } from '@/components/admin/AdminReviewComponents';
+import { supabase } from '@/lib/supabase';
 
-const initialReviews: ReviewData[] = [
-  {
-    id: '1', name: 'Dimas Anggara', role: 'Groom',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-    message: 'Pengerjaan jas untuk pernikahan saya sangat rapi. Ukurannya pas di badan dan bahannya sangat nyaman dipakai seharian. Terima kasih TailorCraft!',
-  },
-  {
-    id: '2', name: 'Andi Pratama', role: 'Eksekutif Perusahaan',
-    avatarUrl: 'https://randomuser.me/api/portraits/men/46.jpg',
-    message: 'Sangat profesional. Kemeja kerja custom saya potongannya sangat presisi, berbeda jauh dengan kemeja ready-to-wear yang biasa saya beli.',
-  },
-];
-
-const emptyForm = (): Omit<ReviewData, 'id'> => ({ name: '', role: '', avatarUrl: '', message: '' });
+const emptyForm = (): ReviewFormData => ({ name: '', role: '', avatarUrl: '', message: '' });
 
 export default function AdminReviewPage() {
-  const [reviews, setReviews]             = useState<ReviewData[]>(initialReviews);
+  const [reviews, setReviews]             = useState<ReviewData[]>([]);
+  const [loading, setLoading]             = useState(false);
+  const [errorMessage, setErrorMessage]   = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen]       = useState(false);
   const [editingReview, setEditingReview] = useState<ReviewData | null>(null);
   const [isDeleteOpen, setIsDeleteOpen]   = useState(false);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
-  const [formData, setFormData]           = useState<Omit<ReviewData, 'id'>>(emptyForm());
+  const [formData, setFormData]           = useState<ReviewFormData>(emptyForm());
+
+  // Fetch reviews from Supabase
+  const fetchReviews = async () => {
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const { data, error } = await supabase
+        .from('testimonials')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setReviews(data.map(r => ({
+          id: r.id.toString(),
+          name: r.name,
+          role: r.role,
+          avatarUrl: r.avatar_url || '',
+          message: r.message
+        })));
+      }
+    } catch (error: any) {
+      console.error('Error fetching reviews:', error?.message || error);
+      setErrorMessage(
+        `Gagal memuat ulasan dari Supabase: ${error?.message || 'Pastikan tabel "testimonials" sudah siap.'}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
 
   const openCreate = () => {
     setFormData(emptyForm());
@@ -44,21 +69,108 @@ export default function AdminReviewPage() {
 
   const openDelete = (id: string) => { setDeletingId(id); setIsDeleteOpen(true); };
 
-  const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (editingReview) {
-      setReviews(prev => prev.map(r => r.id === editingReview.id ? { ...formData, id: editingReview.id } : r));
-    } else {
-      setReviews(prev => [{ ...formData, id: Date.now().toString() }, ...prev]);
+  // Helper to upload avatar image to storage
+  const uploadToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('testimonials')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) {
+        if (error.message?.toLowerCase().includes('bucket') || error.message?.toLowerCase().includes('not found')) {
+          alert(
+            "PENTING: Gagal mengunggah foto profil ke Storage!\n\n" +
+            "Pastikan Anda telah membuat Bucket bernama 'testimonials' di dasbor Supabase Anda (Storage -> New Bucket), " +
+            "serta mengaturnya sebagai 'Public'.\n\n" +
+            "Detail error: " + error.message
+          );
+        } else {
+          alert("Gagal mengunggah foto ke Storage: " + error.message);
+        }
+        return null;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('testimonials')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (err: any) {
+      alert("Terjadi kesalahan saat mengunggah foto: " + err.message);
+      return null;
     }
-    setIsFormOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    let finalAvatarUrl = formData.avatarUrl;
+
+    if (formData.avatarFile) {
+      const uploadedUrl = await uploadToStorage(formData.avatarFile);
+      if (!uploadedUrl) {
+        setLoading(false);
+        return;
+      }
+      finalAvatarUrl = uploadedUrl;
+    }
+
+    try {
+      const payload = {
+        name: formData.name,
+        role: formData.role,
+        avatar_url: finalAvatarUrl,
+        message: formData.message
+      };
+
+      if (editingReview) {
+        const { error } = await supabase
+          .from('testimonials')
+          .update(payload)
+          .eq('id', editingReview.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('testimonials')
+          .insert([payload]);
+        if (error) throw error;
+      }
+
+      setIsFormOpen(false);
+      await fetchReviews();
+    } catch (error: any) {
+      alert("Gagal menyimpan ulasan ke database: " + error.message);
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
     if (deletingId) {
-      setReviews(prev => prev.filter(r => r.id !== deletingId));
-      setIsDeleteOpen(false);
-      setDeletingId(null);
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from('testimonials')
+          .delete()
+          .eq('id', deletingId);
+
+        if (error) throw error;
+
+        setIsDeleteOpen(false);
+        setDeletingId(null);
+        await fetchReviews();
+      } catch (error: any) {
+        alert("Gagal menghapus ulasan: " + error.message);
+        setLoading(false);
+      }
     }
   };
 
@@ -70,27 +182,44 @@ export default function AdminReviewPage() {
                       bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
         <div>
           <h1 className="font-[family-name:var(--font-inter)] text-xl font-bold text-slate-800 flex items-center gap-2">
-            <div className="p-2 bg-[#F0D8A1]/30 text-[#A47251] rounded-lg">
+            <div className="p-2 bg-[#F0D8A1]/30 text-[#8B5E3C] rounded-lg">
               <MessageSquare size={18} strokeWidth={1.5} />
             </div>
             Ulasan Pelanggan
           </h1>
           <p className="font-[family-name:var(--font-inter)] text-[13px] text-slate-500 mt-1">
-            Kelola testimoni pelanggan yang tampil di halaman beranda.
+            Kelola testimoni pelanggan yang tampil di halaman beranda secara dinamis dengan Supabase.
           </p>
         </div>
-        <button onClick={openCreate}
-          className="inline-flex items-center gap-2
-                     font-[family-name:var(--font-inter)] text-[13px] font-semibold
-                     bg-[#A47251] text-white rounded-xl px-5 py-2.5
-                     hover:bg-[#DD9E59] transition-all duration-300 active:scale-95
-                     shadow-[0_2px_8px_rgba(164,114,81,0.25)]">
-          <Plus size={16} strokeWidth={2} /> Tambah Ulasan
-        </button>
+        
+        <div className="flex items-center gap-3">
+          {loading && (
+            <div className="flex items-center gap-2 text-[12px] text-slate-500 font-medium font-[family-name:var(--font-inter)] bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
+              <Loader2 size={14} className="animate-spin text-[#8B5E3C]" />
+              Memproses...
+            </div>
+          )}
+
+          <button onClick={openCreate}
+            disabled={loading}
+            className="inline-flex items-center gap-2
+                       font-[family-name:var(--font-inter)] text-[13px] font-semibold
+                       bg-[#8B5E3C] text-white rounded-xl px-5 py-2.5
+                       hover:bg-[#DD9E59] transition-all duration-300 active:scale-95 disabled:opacity-55
+                       shadow-[0_2px_8px_rgba(164,114,81,0.25)]">
+            <Plus size={16} strokeWidth={2} /> Tambah Ulasan
+          </button>
+        </div>
       </div>
 
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-[13px] text-red-600 font-[family-name:var(--font-inter)] shadow-sm">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start ${loading ? 'opacity-70 pointer-events-none' : ''}`}>
         <AnimatePresence>
           {reviews.map(review => (
             <ReviewCard key={review.id} review={review} onEdit={openEdit} onDelete={openDelete} />

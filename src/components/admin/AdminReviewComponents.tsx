@@ -32,14 +32,14 @@ export function ReviewCard({
         <div className="w-11 h-11 rounded-full overflow-hidden bg-[#F0D8A1]/30 flex items-center justify-center shrink-0 border border-slate-100">
           {review.avatarUrl
             ? <img src={review.avatarUrl} alt={review.name} className="w-full h-full object-cover" loading="lazy" />
-            : <User size={20} strokeWidth={1.5} className="text-[#A47251]/50" />
+            : <User size={20} strokeWidth={1.5} className="text-[#8B5E3C]/50" />
           }
         </div>
         <div>
           <p className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 leading-tight">
             {review.name}
           </p>
-          <p className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-[#A47251] mt-0.5">
+          <p className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-[#8B5E3C] mt-0.5">
             {review.role || 'Pelanggan'}
           </p>
         </div>
@@ -59,7 +59,7 @@ export function ReviewCard({
           className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl
                      font-[family-name:var(--font-inter)] text-[12px] font-semibold
                      border border-slate-200 text-slate-600
-                     hover:border-[#A47251] hover:text-[#A47251] transition-all active:scale-95">
+                     hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all active:scale-95">
           <Pencil size={13} strokeWidth={1.5} /> Edit
         </button>
         <button onClick={() => onDelete(review.id)}
@@ -75,13 +75,15 @@ export function ReviewCard({
 }
 
 // ─── Form Modal ───────────────────────────────────────────────────────────────
+export type ReviewFormData = Omit<ReviewData, 'id'> & { avatarFile?: File };
+
 interface ReviewFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   isEditing: boolean;
-  formData: Omit<ReviewData, 'id'>;
-  setFormData: React.Dispatch<React.SetStateAction<Omit<ReviewData, 'id'>>>;
+  formData: ReviewFormData;
+  setFormData: React.Dispatch<React.SetStateAction<ReviewFormData>>;
 }
 
 export function ReviewFormModal({ isOpen, onClose, onSave, isEditing, formData, setFormData }: ReviewFormModalProps) {
@@ -90,13 +92,13 @@ export function ReviewFormModal({ isOpen, onClose, onSave, isEditing, formData, 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setFormData(p => ({ ...p, avatarUrl: URL.createObjectURL(file) }));
+    setFormData(p => ({ ...p, avatarUrl: URL.createObjectURL(file), avatarFile: file }));
   };
 
   const inputClass =
     "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] transition-all";
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
 
   const labelClass = "block font-[family-name:var(--font-inter)] text-[12px] font-semibold text-slate-700 mb-1";
 
@@ -156,7 +158,7 @@ export function ReviewFormModal({ isOpen, onClose, onSave, isEditing, formData, 
                   </div>
                   <label className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed
                                     border-slate-200 bg-slate-50/50 cursor-pointer
-                                    hover:border-[#A47251] hover:bg-[#F0D8A1]/10 transition-all">
+                                    hover:border-[#8B5E3C] hover:bg-[#F0D8A1]/10 transition-all">
                     <ImageIcon size={15} strokeWidth={1.5} className="text-slate-400" />
                     <span className="font-[family-name:var(--font-inter)] text-[12px] text-slate-500">
                       {formData.avatarUrl ? 'Ganti foto' : 'Upload foto'}
@@ -183,7 +185,7 @@ export function ReviewFormModal({ isOpen, onClose, onSave, isEditing, formData, 
                   Batal
                 </button>
                 <button type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#A47251] text-white
+                  className="flex-1 py-2.5 rounded-xl bg-[#8B5E3C] text-white
                              font-[family-name:var(--font-inter)] text-[13px] font-semibold
                              hover:bg-[#DD9E59] transition-all active:scale-95
                              shadow-[0_2px_8px_rgba(164,114,81,0.25)]">

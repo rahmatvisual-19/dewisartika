@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Logo */}
         <div className="mb-6">
           <span
-            className="font-[family-name:var(--font-instrument-serif)] text-4xl font-normal text-[#A47251]"
+            className="font-[family-name:var(--font-instrument-serif)] text-4xl font-normal text-[#8B5E3C]"
             style={{ letterSpacing: '-0.02em' }}
           >
             TailorCraft
@@ -22,9 +22,9 @@ export default function Footer() {
       </div>
 
       {/* Hak Cipta */}
-      <div className="border-t border-[#A47251]/10">
+      <div className="border-t border-[#8B5E3C]/10">
         <div className="max-w-7xl mx-auto px-6 py-6 text-center font-[family-name:var(--font-inter)] text-sm text-slate-400">
-          <Link href="/" className="font-semibold text-[#A47251] hover:text-[#DD9E59] transition-colors">
+          <Link href="/" className="font-semibold text-[#8B5E3C] hover:text-[#DD9E59] transition-colors">
             TailorCraft
           </Link>{" "}
           © 2026. Hak Cipta Dilindungi.

@@ -27,7 +27,7 @@ const VARIANTS: Record<string, BlobConfig[]> = {
     { color: '#F0D8A1', bottom: '0%', left: '5%',   width: '300px', height: '300px', opacity: 0.18, blur: '70px'  },
   ],
   showcase: [
-    { color: '#A47251', top: '0%',    right: '10%', width: '450px', height: '450px', opacity: 0.12, blur: '110px' },
+    { color: '#8B5E3C', top: '0%',    right: '10%', width: '450px', height: '450px', opacity: 0.12, blur: '110px' },
     { color: '#E89B7E', bottom: '0%', left: '0%',   width: '380px', height: '380px', opacity: 0.14, blur: '90px'  },
     { color: '#F0D8A1', top: '40%',   right: '0%',  width: '300px', height: '300px', opacity: 0.16, blur: '80px'  },
   ],
@@ -38,7 +38,7 @@ const VARIANTS: Record<string, BlobConfig[]> = {
   testimonials: [
     { color: '#E89B7E', top: '0%',    left: '0%',   width: '480px', height: '480px', opacity: 0.12, blur: '110px' },
     { color: '#F0D8A1', top: '30%',   right: '0%',  width: '400px', height: '400px', opacity: 0.14, blur: '95px'  },
-    { color: '#A47251', bottom: '0%', left: '20%',  width: '320px', height: '320px', opacity: 0.10, blur: '80px'  },
+    { color: '#8B5E3C', bottom: '0%', left: '20%',  width: '320px', height: '320px', opacity: 0.10, blur: '80px'  },
   ],
   cta: [
     { color: '#DD9E59', top: '0%',    right: '0%',  width: '420px', height: '420px', opacity: 0.13, blur: '95px'  },

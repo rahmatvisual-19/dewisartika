@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import PageViewTracker from "@/components/PageViewTracker";
 
 // Hanya load font yang benar-benar dipakai — hapus Geist yang tidak digunakan
 const instrumentSerif = Instrument_Serif({
@@ -49,9 +50,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.cdnfonts.com" />
       </head>
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)] font-sans pb-[80px] md:pb-0">
+        <PageViewTracker />
         <Navbar />
         {children}
       </body>
     </html>
   );
 }
+

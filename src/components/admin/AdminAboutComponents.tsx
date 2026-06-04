@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scissors, Shirt, Upload, X, Plus, Trash2 } from 'lucide-react';
+import { Scissors, Shirt, Upload, X, Plus, Trash2, ChevronDown } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface AboutPerson {
@@ -17,6 +17,7 @@ export interface AboutPerson {
   buttonHref: string;
   image: string;
   imageAlt: string;
+  newImageFile?: File;
 }
 
 // ─── Image Upload ─────────────────────────────────────────────────────────────
@@ -27,14 +28,14 @@ function ImageUpload({
 }: {
   image: string;
   imageAlt: string;
-  onChange: (url: string) => void;
+  onChange: (url: string, file: File) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onChange(URL.createObjectURL(file));
+    onChange(URL.createObjectURL(file), file);
     e.target.value = '';
   };
 
@@ -69,7 +70,7 @@ function ImageUpload({
             className="w-full h-full flex flex-col items-center justify-center gap-2
                        hover:bg-slate-50 transition-colors duration-150"
           >
-            <div className="w-12 h-12 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#A47251]">
+            <div className="w-12 h-12 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#8B5E3C]">
               <Upload size={22} strokeWidth={1.5} />
             </div>
             <p className="font-[family-name:var(--font-inter)] text-[13px] text-slate-500 font-medium">
@@ -88,8 +89,8 @@ function ImageUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
-                     border border-dashed border-[#A47251]/40 bg-[#F0D8A1]/10
-                     font-[family-name:var(--font-inter)] text-[13px] font-medium text-[#A47251]
+                     border border-dashed border-[#8B5E3C]/40 bg-[#F0D8A1]/10
+                     font-[family-name:var(--font-inter)] text-[13px] font-medium text-[#8B5E3C]
                      hover:bg-[#F0D8A1]/20 transition-all duration-150"
         >
           <Upload size={14} strokeWidth={1.5} />
@@ -148,13 +149,13 @@ function ServicesEditor({
               transition={{ duration: 0.15 }}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
                          font-[family-name:var(--font-inter)] text-[11px] font-semibold
-                         text-[#A47251] bg-[#F0D8A1]/30 border border-[#A47251]/15"
+                         text-[#8B5E3C] bg-[#F0D8A1]/30 border border-[#8B5E3C]/15"
             >
               {s}
               <button
                 type="button"
                 onClick={() => handleRemove(i)}
-                className="text-[#A47251]/60 hover:text-red-500 transition-colors"
+                className="text-[#8B5E3C]/60 hover:text-red-500 transition-colors"
               >
                 <X size={11} strokeWidth={2} />
               </button>
@@ -174,12 +175,12 @@ function ServicesEditor({
           className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white
                      font-[family-name:var(--font-inter)] text-[13px] text-slate-700
                      placeholder:text-slate-400 focus:outline-none focus:ring-2
-                     focus:ring-[#A47251]/30 focus:border-[#A47251]/50 transition-all"
+                     focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C]/50 transition-all"
         />
         <button
           type="button"
           onClick={handleAdd}
-          className="px-3 py-2 rounded-xl bg-[#A47251] text-white
+          className="px-3 py-2 rounded-xl bg-[#8B5E3C] text-white
                      hover:bg-[#DD9E59] transition-all duration-150 active:scale-95"
         >
           <Plus size={16} strokeWidth={1.5} />
@@ -203,7 +204,7 @@ function Field({
     'w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white ' +
     'font-[family-name:var(--font-inter)] text-[13px] text-slate-700 ' +
     'placeholder:text-slate-400 focus:outline-none focus:ring-2 ' +
-    'focus:ring-[#A47251]/30 focus:border-[#A47251]/50 transition-all';
+    'focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C]/50 transition-all';
 
   return (
     <div className="space-y-1.5">
@@ -231,13 +232,78 @@ function Field({
   );
 }
 
+// ─── Custom Dropdown ──────────────────────────────────────────────────────────
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-200 bg-white
+                   font-[family-name:var(--font-inter)] text-[13px] text-slate-700 text-left cursor-pointer
+                   focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C]/50 transition-all"
+      >
+        <span className="truncate">{selectedOption?.label || 'Pilih...'}</span>
+        <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1.5 bg-white border border-slate-100 rounded-xl shadow-lg max-h-60 overflow-y-auto py-1 animate-in fade-in-50 slide-in-from-top-1 duration-150">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full px-3 py-2.5 text-left font-[family-name:var(--font-inter)] text-[13px] transition-colors cursor-pointer block truncate
+                         ${opt.value === value
+                           ? 'bg-[#F0D8A1]/30 text-[#8B5E3C] font-semibold'
+                           : 'text-slate-600 hover:bg-slate-50'
+                         }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Person Form ──────────────────────────────────────────────────────────────
 function PersonForm({
   data,
   onChange,
+  tailors = [],
 }: {
   data: AboutPerson;
   onChange: (updated: AboutPerson) => void;
+  tailors?: { id: string; name: string; phone: string }[];
 }) {
   const set = <K extends keyof AboutPerson>(key: K, value: AboutPerson[K]) =>
     onChange({ ...data, [key]: value });
@@ -249,7 +315,13 @@ function PersonForm({
         <ImageUpload
           image={data.image}
           imageAlt={data.imageAlt}
-          onChange={url => set('image', url)}
+          onChange={(url, file) => {
+            onChange({
+              ...data,
+              image: url,
+              newImageFile: file
+            });
+          }}
         />
         <Field
           label="Alt Text Gambar"
@@ -297,12 +369,26 @@ function PersonForm({
             onChange={v => set('buttonText', v)}
             placeholder="cth. Konsultasi dengan Dewi"
           />
-          <Field
-            label="Link Tombol"
-            value={data.buttonHref}
-            onChange={v => set('buttonHref', v)}
-            placeholder="/kontak"
-          />
+          <div className="space-y-1.5">
+            <label className="font-[family-name:var(--font-inter)] text-[13px] font-semibold text-slate-700">
+              Link Tombol (Hubungkan Kontak)
+            </label>
+            <CustomDropdown
+              value={data.buttonHref}
+              onChange={v => set('buttonHref', v)}
+              options={[
+                { value: '/kontak', label: 'Halaman Kontak (Bawaan)' },
+                ...tailors.map(t => ({
+                  value: `contact:${t.id}`,
+                  label: `WhatsApp: ${t.name} (+${t.phone})`
+                })),
+                ...(!data.buttonHref.startsWith('contact:') && data.buttonHref !== '/kontak' && data.buttonHref !== ''
+                  ? [{ value: data.buttonHref, label: `Kustom: ${data.buttonHref}` }]
+                  : []
+                )
+              ]}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -313,9 +399,11 @@ function PersonForm({
 export function AdminAboutEditor({
   persons,
   onChange,
+  tailors = [],
 }: {
   persons: AboutPerson[];
   onChange: (persons: AboutPerson[]) => void;
+  tailors?: { id: string; name: string; phone: string }[];
 }) {
   const [activeTab, setActiveTab] = useState(persons[0]?.id ?? '');
 
@@ -342,8 +430,8 @@ export function AdminAboutEditor({
                         font-[family-name:var(--font-inter)] transition-all duration-200 active:scale-95
                         whitespace-nowrap flex-1
                         ${activeTab === p.id
-                          ? 'bg-[#A47251] text-white shadow-[0_4px_12px_rgba(164,114,81,0.30)]'
-                          : 'bg-slate-100 text-slate-600 hover:bg-[#F0D8A1]/50 hover:text-[#A47251]'
+                          ? 'bg-[#8B5E3C] text-white shadow-[0_4px_12px_rgba(164,114,81,0.30)]'
+                          : 'bg-slate-100 text-slate-600 hover:bg-[#F0D8A1]/50 hover:text-[#8B5E3C]'
                         }`}
           >
             {iconMap[p.icon]}
@@ -363,7 +451,7 @@ export function AdminAboutEditor({
           className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6"
         >
           {current && (
-            <PersonForm data={current} onChange={handlePersonChange} />
+            <PersonForm data={current} onChange={handlePersonChange} tailors={tailors} />
           )}
         </motion.div>
       </AnimatePresence>

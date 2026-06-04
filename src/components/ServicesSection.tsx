@@ -118,17 +118,17 @@ function ServiceCard({ service }: { service: typeof services[0] }) {
       variants={itemVariants}
       layout
       className="group bg-white p-8 rounded-3xl border border-slate-100
-                 hover:border-[#A47251]/30
+                 hover:border-[#8B5E3C]/30
                  shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-xl
                  transition-all duration-300 relative overflow-hidden"
     >
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#F0D8A1] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl z-0" />
       <div className="relative z-10">
-        <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-[#A47251] mb-6
-                        group-hover:bg-[#A47251] group-hover:text-white transition-colors duration-300">          <Icon size={28} />
+        <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-[#8B5E3C] mb-6
+                        group-hover:bg-[#8B5E3C] group-hover:text-white transition-colors duration-300">          <Icon size={28} />
         </div>
         <h3 className="font-[family-name:var(--font-inter)] text-[15px] font-semibold text-slate-800 mb-3
-                       group-hover:text-[#A47251] transition-colors duration-300">
+                       group-hover:text-[#8B5E3C] transition-colors duration-300">
           {service.title}
         </h3>
         <p className="font-[family-name:var(--font-inter)] text-slate-500 leading-relaxed text-sm">
@@ -194,15 +194,15 @@ function DesktopTabletView() {
             className="inline-flex items-center gap-2
                        font-[family-name:var(--font-inter)] text-[13.5px] font-semibold
                        px-7 py-3 rounded-2xl
-                       border border-[#A47251]/30 text-[#A47251] bg-white
-                       hover:bg-[#A47251] hover:text-white hover:border-[#A47251]
+                       border border-[#8B5E3C]/30 text-[#8B5E3C] bg-white
+                       hover:bg-[#8B5E3C] hover:text-white hover:border-[#8B5E3C]
                        disabled:opacity-60 disabled:cursor-not-allowed
                        transition-all duration-300 active:scale-95
                        shadow-[0_2px_12px_rgba(164,114,81,0.10)]"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-[#A47251]/30 border-t-[#A47251] rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-[#8B5E3C]/30 border-t-[#8B5E3C] rounded-full animate-spin" />
                 Memuat...
               </span>
             ) : showAll ? (
@@ -253,7 +253,7 @@ function MobileView() {
                          bg-white rounded-3xl border border-slate-100 p-6
                          shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
             >
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-[#A47251] mb-5">
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-[#8B5E3C] mb-5">
                 <Icon size={24} />
               </div>
               <h3 className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 mb-2 leading-snug">
@@ -284,7 +284,7 @@ function MobileView() {
             }}
             className={`rounded-full transition-all duration-300
               ${i === activeIndex
-                ? 'w-5 h-2 bg-[#A47251]'
+                ? 'w-5 h-2 bg-[#8B5E3C]'
                 : 'w-2 h-2 bg-slate-300'
               }`}
           />
@@ -317,7 +317,7 @@ export default function ServicesSection() {
 
       {/* Ornamen blur — tidak mempengaruhi layout */}
       <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-64 h-64 bg-[#F0D8A1]/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-[#A47251]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-[#8B5E3C]/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
@@ -329,10 +329,10 @@ export default function ServicesSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="inline-block py-1 px-4 rounded-full border border-[#DD9E59]/30 bg-[#F0D8A1]/20 text-[#A47251] font-[family-name:var(--font-inter)] text-sm font-semibold mb-4">
+            <div className="inline-block py-1 px-4 rounded-full border border-[#DD9E59]/30 bg-[#F0D8A1]/20 text-[#8B5E3C] font-[family-name:var(--font-inter)] text-sm font-semibold mb-4">
               Apa yang Kami Tawarkan
             </div>
-            <h2 className="font-[family-name:var(--font-instrument-serif)] text-4xl md:text-5xl font-normal text-[#A47251] mb-3"
+            <h2 className="font-[family-name:var(--font-instrument-serif)] text-4xl md:text-5xl font-normal text-[#8B5E3C] mb-3"
                 style={{ letterSpacing: '-0.02em' }}>
               Layanan <em className="not-italic italic">Kami</em>
             </h2>

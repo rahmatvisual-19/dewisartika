@@ -50,9 +50,43 @@ const tabs = [
   },
 ];
 
-export default function AboutSection() {
-  const [active, setActive] = useState(tabs[0].value);
-  const current = tabs.find(t => t.value === active) ?? tabs[0];
+interface DBAboutProfile {
+  id: string | number;
+  label: string;
+  icon: string;
+  badge: string;
+  title: string;
+  description: string;
+  services: string[];
+  button_text: string;
+  button_href: string;
+  image: string;
+  image_alt: string;
+}
+
+export default function AboutSection({ aboutData }: { aboutData?: DBAboutProfile[] }) {
+  const activeTabs = aboutData && aboutData.length > 0
+    ? aboutData.map(p => ({
+        value: p.label.toLowerCase().replace(/\s+/g, '-'),
+        icon: p.icon === 'scissors' 
+          ? <Scissors className="w-4 h-4 shrink-0" /> 
+          : <Shirt className="w-4 h-4 shrink-0" />,
+        label: p.label,
+        badge: p.badge,
+        title: p.title,
+        description: p.description,
+        services: p.services || [],
+        buttonText: p.button_text || '',
+        buttonHref: p.button_href || '#',
+        image: p.image || '',
+        imageAlt: p.image_alt || '',
+      }))
+    : tabs;
+
+  const [active, setActive] = useState(activeTabs[0]?.value || 'dewi');
+  const current = activeTabs.find(t => t.value === active) ?? activeTabs[0];
+
+  if (!current) return null;
 
   return (
     <section className="py-12 bg-white relative overflow-hidden">
@@ -61,14 +95,14 @@ export default function AboutSection() {
         {/* Header */}
         <div className="flex flex-col items-center gap-3 text-center mb-10">
           <span className="inline-block py-1 px-4 rounded-full border border-[#DD9E59]/30 bg-[#F0D8A1]/20
-                           font-[family-name:var(--font-inter)] text-sm font-semibold text-[#A47251]">
+                           font-[family-name:var(--font-inter)] text-sm font-semibold text-[#8B5E3C]">
             Tim Penjahit Kami
           </span>
           <h2
             className="font-[family-name:var(--font-instrument-serif)] text-4xl md:text-5xl font-normal text-slate-800 max-w-2xl"
             style={{ letterSpacing: '-0.02em' }}
           >
-            Tangan <em className="not-italic italic text-[#A47251]">terampil</em> di balik setiap karya
+            Tangan <em className="not-italic italic text-[#8B5E3C]">terampil</em> di balik setiap karya
           </h2>
           <p className="font-[family-name:var(--font-inter)] text-slate-500 text-[15px] max-w-xl leading-relaxed">
             Kenali para ahli yang dengan penuh dedikasi mewujudkan busana impian Anda menjadi kenyataan.
@@ -77,7 +111,7 @@ export default function AboutSection() {
 
         {/* Tab Triggers — 2 tab sejajar, lebar sama, tidak wrap */}
         <div className="flex gap-3 max-w-md mx-auto mb-8 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {tabs.map(tab => (
+          {activeTabs.map(tab => (
             <button
               key={tab.value}
               onClick={() => setActive(tab.value)}
@@ -85,8 +119,8 @@ export default function AboutSection() {
                           font-[family-name:var(--font-inter)] transition-all duration-200 active:scale-95
                           whitespace-nowrap flex-1
                           ${active === tab.value
-                            ? 'bg-[#A47251] text-white shadow-[0_4px_12px_rgba(164,114,81,0.30)]'
-                            : 'bg-slate-100 text-slate-600 hover:bg-[#F0D8A1]/50 hover:text-[#A47251]'
+                            ? 'bg-[#8B5E3C] text-white shadow-[0_4px_12px_rgba(164,114,81,0.30)]'
+                            : 'bg-slate-100 text-slate-600 hover:bg-[#F0D8A1]/50 hover:text-[#8B5E3C]'
                           }`}
             >
               {tab.icon}
@@ -121,8 +155,8 @@ export default function AboutSection() {
 
               {/* Teks */}
               <div className="flex flex-col gap-5 p-6 lg:p-12 order-2 lg:order-1">
-                <span className="inline-block w-fit py-1 px-3 rounded-full border border-[#A47251]/20 bg-white
-                                 font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#A47251]">
+                <span className="inline-block w-fit py-1 px-3 rounded-full border border-[#8B5E3C]/20 bg-white
+                                 font-[family-name:var(--font-inter)] text-[12px] font-semibold text-[#8B5E3C]">
                   {current.badge}
                 </span>
                 <h3
@@ -142,23 +176,38 @@ export default function AboutSection() {
                   {current.services.map(s => (
                     <span key={s}
                       className="font-[family-name:var(--font-inter)] text-[11px] font-semibold
-                                 text-[#A47251] bg-[#F0D8A1]/30 border border-[#A47251]/15
+                                 text-[#8B5E3C] bg-[#F0D8A1]/30 border border-[#8B5E3C]/15
                                  px-3 py-1 rounded-full whitespace-nowrap shrink-0">
                       {s}
                     </span>
                   ))}
                 </div>
 
-                <Link
-                  href={current.buttonHref}
-                  className="inline-flex items-center gap-2 w-fit mt-auto
-                             font-[family-name:var(--font-inter)] text-[13px] font-semibold
-                             px-6 py-3 rounded-2xl bg-[#A47251] text-white
-                             hover:bg-[#DD9E59] transition-all duration-300 active:scale-95
-                             shadow-[0_4px_16px_rgba(164,114,81,0.25)]"
-                >
-                  {current.buttonText}
-                </Link>
+                {current.buttonHref.startsWith('http') ? (
+                  <a
+                    href={current.buttonHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 w-fit mt-auto
+                               font-[family-name:var(--font-inter)] text-[13px] font-semibold
+                               px-6 py-3 rounded-2xl bg-[#8B5E3C] text-white
+                               hover:bg-[#DD9E59] transition-all duration-300 active:scale-95
+                               shadow-[0_4px_16px_rgba(164,114,81,0.25)]"
+                  >
+                    {current.buttonText}
+                  </a>
+                ) : (
+                  <Link
+                    href={current.buttonHref}
+                    className="inline-flex items-center gap-2 w-fit mt-auto
+                               font-[family-name:var(--font-inter)] text-[13px] font-semibold
+                               px-6 py-3 rounded-2xl bg-[#8B5E3C] text-white
+                               hover:bg-[#DD9E59] transition-all duration-300 active:scale-95
+                               shadow-[0_4px_16px_rgba(164,114,81,0.25)]"
+                  >
+                    {current.buttonText}
+                  </Link>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>

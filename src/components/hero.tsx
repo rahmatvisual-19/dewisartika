@@ -19,8 +19,8 @@ const buttonVariants = cva(
         default: "bg-[#E89B7E] text-white hover:bg-[#d4876a] active:scale-95",
         destructive: "bg-red-500 text-white hover:bg-red-500/90",
         outline: "border border-[#E89B7E] text-[#E89B7E] bg-transparent hover:bg-[#E89B7E] hover:text-white active:scale-95",
-        secondary: "bg-[#F0D8A1] text-[#A47251] hover:bg-[#F0D8A1]/80",
-        ghost: "hover:bg-[#F0D8A1] hover:text-[#A47251]",
+        secondary: "bg-[#F0D8A1] text-[#8B5E3C] hover:bg-[#F0D8A1]/80",
+        ghost: "hover:bg-[#F0D8A1] hover:text-[#8B5E3C]",
         link: "text-[#E89B7E] underline-offset-4 hover:underline",
       },
       size: {
@@ -123,11 +123,20 @@ const HeroSection = ({ title, subtitle, actions, stats, images, className }: Her
             className="mt-8 flex flex-wrap justify-center gap-4 lg:justify-start"
             variants={itemVariants}
           >
-            {actions.map((action, index) => (
-              <Button key={index} variant={action.variant} size="lg" className={action.className} asChild>
-                <Link href={action.href}>{action.text}</Link>
-              </Button>
-            ))}
+            {actions.map((action, index) => {
+              const isExternal = action.href.startsWith('http');
+              return (
+                <Button key={index} variant={action.variant} size="lg" className={action.className} asChild>
+                  {isExternal ? (
+                    <a href={action.href} target="_blank" rel="noopener noreferrer">
+                      {action.text}
+                    </a>
+                  ) : (
+                    <Link href={action.href}>{action.text}</Link>
+                  )}
+                </Button>
+              );
+            })}
           </motion.div>
           <motion.div
             className="mt-12 flex flex-wrap justify-center gap-8 lg:justify-start"
@@ -164,7 +173,7 @@ const HeroSection = ({ title, subtitle, actions, stats, images, className }: Her
         >
           {/* Decorative Shapes */}
           <motion.div
-            className="absolute -top-4 left-1/4 h-16 w-16 rounded-full bg-[#A47251]/20"
+            className="absolute -top-4 left-1/4 h-16 w-16 rounded-full bg-[#8B5E3C]/20"
             variants={floatingVariants}
             animate="animate"
           />

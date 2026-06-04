@@ -1,12 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageCircle, Globe, MapPin, ChevronDown } from 'lucide-react';
-
-const TAILORS = [
-  { name: 'Dewi Sartika',     phone: '6281362989136' },
-  { name: 'Penjahit Maulana', phone: '6285262472451' },
-];
+import { supabase } from '@/lib/supabase';
 
 interface ContactProps {
   title?:       string;
@@ -18,9 +14,13 @@ interface ContactProps {
 export default function ContactForm({
   title       = "Hubungi Kami",
   description = "Punya pertanyaan tentang layanan custom, material, atau ingin mengatur jadwal fitting? Isi form di bawah dan pesan Anda akan langsung dikirim via WhatsApp.",
-  web         = { label: "www.tailorcraft.com", url: "https://tailorcraft.com" },
-  address     = "Jl. Sudirman No. 123, Jakarta Selatan",
+  web: initialWeb,
+  address: initialAddress,
 }: ContactProps) {
+  const [tailors, setTailors] = useState<{ name: string; phone: string }[]>([]);
+  const [web, setWeb] = useState(initialWeb || { label: "www.tailorcraft.com", url: "https://tailorcraft.com" });
+  const [address, setAddress] = useState(initialAddress || "Jl. Sudirman No. 123, Jakarta Selatan");
+
   const [firstname, setFirstname] = useState('');
   const [lastname,  setLastname]  = useState('');
   const [alamat,    setAlamat]    = useState('');
@@ -30,10 +30,44 @@ export default function ContactForm({
   const [open,      setOpen]      = useState(false);
   const [error,     setError]     = useState('');
 
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const tailorsList = data.filter(c => c.type === 'tailor').map(c => ({ name: c.name || '', phone: c.value }));
+          const addressesList = data.filter(c => c.type === 'address').map(c => c.value);
+          const websitesList = data.filter(c => c.type === 'website').map(c => ({ label: c.name || '', url: c.value }));
+
+          if (tailorsList.length > 0) setTailors(tailorsList);
+          if (addressesList.length > 0) setAddress(addressesList[0]);
+          if (websitesList.length > 0) setWeb(websitesList[0]);
+        } else {
+          setTailors([
+            { name: 'Dewi Sartika',     phone: '6281362989136' },
+            { name: 'Penjahit Maulana', phone: '6285262472451' },
+          ]);
+        }
+      } catch (err) {
+        console.error('Error fetching contacts in client view:', err);
+        setTailors([
+          { name: 'Dewi Sartika',     phone: '6281362989136' },
+          { name: 'Penjahit Maulana', phone: '6285262472451' },
+        ]);
+      }
+    };
+
+    fetchContacts();
+  }, [initialWeb, initialAddress]);
+
   const inputClass =
     "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] " +
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] " +
     "transition-all duration-200";
 
   const labelClass =
@@ -44,7 +78,7 @@ export default function ContactForm({
     if (!recipient) { setError('Pilih penjahit yang ingin dihubungi.'); return; }
     setError('');
 
-    const tailor = TAILORS.find(t => t.name === recipient);
+    const tailor = tailors.find(t => t.name === recipient);
     if (!tailor) return;
 
     const nama = [firstname, lastname].filter(Boolean).join(' ') || 'Pelanggan';
@@ -72,7 +106,7 @@ export default function ContactForm({
           <div className="flex flex-col gap-8 flex-1">
             <div className="text-center lg:text-left">
               <h1
-                className="font-[family-name:var(--font-instrument-serif)] text-5xl md:text-6xl font-normal text-[#A47251] mb-4"
+                className="font-[family-name:var(--font-instrument-serif)] text-5xl md:text-6xl font-normal text-[#8B5E3C] mb-4"
                 style={{ letterSpacing: '-0.02em' }}
               >
                 {title.split(' ')[0]}{' '}
@@ -89,7 +123,7 @@ export default function ContactForm({
                 { icon: MapPin, label: 'Alamat',  value: address,   href: null,    external: false },
               ].map(({ icon: Icon, label, value, href, external }) => (
                 <div key={label} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-[#A47251] shadow-sm shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-[#8B5E3C] shadow-sm shrink-0">
                     <Icon size={14} strokeWidth={1.5} />
                   </div>
                   <div>
@@ -100,7 +134,7 @@ export default function ContactForm({
                       <a href={href}
                          target={external ? '_blank' : undefined}
                          rel={external ? 'noopener noreferrer' : undefined}
-                         className="font-[family-name:var(--font-inter)] text-[13px] text-slate-700 hover:text-[#A47251] transition-colors">
+                         className="font-[family-name:var(--font-inter)] text-[13px] text-slate-700 hover:text-[#8B5E3C] transition-colors">
                         {value}
                       </a>
                     ) : (
@@ -137,7 +171,7 @@ export default function ContactForm({
                                 font-[family-name:var(--font-inter)] text-sm transition-all text-left
                                 ${recipient ? 'text-slate-800' : 'text-slate-400'}
                                 ${open
-                                  ? 'border-[#A47251] ring-2 ring-[#A47251]/30 bg-white'
+                                  ? 'border-[#8B5E3C] ring-2 ring-[#8B5E3C]/30 bg-white'
                                   : 'border-slate-200 bg-slate-50/50'
                                 }`}
                   >
@@ -148,14 +182,14 @@ export default function ContactForm({
 
                   {open && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-lg z-20 overflow-hidden">
-                      {TAILORS.map(t => (
+                      {tailors.map(t => (
                         <button
                           key={t.phone}
                           type="button"
                           onClick={() => { setRecipient(t.name); setOpen(false); setError(''); }}
                           className={`w-full text-left px-4 py-3 font-[family-name:var(--font-inter)] text-[13px]
                                       hover:bg-[#F0D8A1]/20 transition-colors
-                                      ${recipient === t.name ? 'text-[#A47251] font-semibold bg-[#F0D8A1]/10' : 'text-slate-700'}`}
+                                      ${recipient === t.name ? 'text-[#8B5E3C] font-semibold bg-[#F0D8A1]/10' : 'text-slate-700'}`}
                         >
                           {t.name}
                         </button>
@@ -176,7 +210,7 @@ export default function ContactForm({
                     value={firstname} onChange={e => setFirstname(e.target.value)}
                     className={inputClass} />
                 </div>
-                <div className="flex-1">
+                <div className="flex-grow">
                   <label htmlFor="lastname" className={labelClass}>Nama Belakang</label>
                   <input type="text" id="lastname" placeholder="Nama belakang"
                     suppressHydrationWarning
@@ -216,7 +250,7 @@ export default function ContactForm({
                 suppressHydrationWarning
                 className="w-full h-12 inline-flex items-center justify-center gap-2
                            font-[family-name:var(--font-inter)] text-[14px] font-semibold
-                           bg-[#25D366] text-white rounded-xl
+                           bg-[#25D366] text-white rounded-xl cursor-pointer
                            hover:bg-[#1ebe5d] transition-all duration-300
                            shadow-[0_4px_16px_rgba(37,211,102,0.25)]
                            active:scale-[0.98] mt-1"

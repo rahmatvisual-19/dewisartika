@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Image as ImageIcon, Users,
-  Shirt, MessageSquare, LogOut, Megaphone, Phone, UserCircle,
+  Shirt, MessageSquare, LogOut, Megaphone, Phone, UserCircle, ShoppingBag,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const menuItems = [
   { title: 'Dashboard',          url: '/admin',          icon: LayoutDashboard },
@@ -13,6 +14,7 @@ const menuItems = [
   { title: 'Klien & Partner',    url: '/admin/client',   icon: Users           },
   { title: 'About Me',           url: '/admin/about',    icon: UserCircle      },
   { title: 'Katalog Produk',     url: '/admin/product',  icon: Shirt           },
+  { title: 'Daftar Pesanan',     url: '/admin/orders',   icon: ShoppingBag     },
   { title: 'Gambar CTA',         url: '/admin/cta',      icon: Megaphone       },
   { title: 'Ulasan Pelanggan',   url: '/admin/ulasan',   icon: MessageSquare   },
   { title: 'Kontak',             url: '/admin/kontak',   icon: Phone           },
@@ -20,9 +22,20 @@ const menuItems = [
 
 export function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const handleClick = () => {
     onClose?.();
+  };
+
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    onClose?.();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error.message);
+    }
+    router.push('/admin/login');
   };
 
   return (
@@ -30,7 +43,7 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-slate-100">
         <span
-          className="font-[family-name:var(--font-instrument-serif)] text-xl font-normal text-[#A47251]"
+          className="font-[family-name:var(--font-instrument-serif)] text-xl font-normal text-[#8B5E3C]"
           style={{ letterSpacing: '-0.02em' }}
         >
           TailorCraft
@@ -57,12 +70,12 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
                               font-[family-name:var(--font-inter)] text-[13.5px] font-medium
                               transition-all duration-200
                               ${isActive
-                                ? 'bg-[#F0D8A1]/40 text-[#A47251]'
+                                ? 'bg-[#F0D8A1]/40 text-[#8B5E3C]'
                                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
                               }`}
                 >
                   <Icon size={17} strokeWidth={1.5}
-                    className={isActive ? 'text-[#A47251]' : 'text-slate-400'} />
+                    className={isActive ? 'text-[#8B5E3C]' : 'text-slate-400'} />
                   {title}
                 </Link>
               </li>
@@ -73,15 +86,16 @@ export function AdminSidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Footer */}
       <div className="border-t border-slate-100 py-3 px-3">
-        <Link
-          href="/admin/login"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
                      font-[family-name:var(--font-inter)] text-[13.5px] font-medium
-                     text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+                     text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200
+                     text-left cursor-pointer border-0 bg-transparent"
         >
           <LogOut size={17} strokeWidth={1.5} />
           Keluar
-        </Link>
+        </button>
       </div>
     </aside>
   );

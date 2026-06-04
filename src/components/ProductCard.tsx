@@ -40,7 +40,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
       {/* Info */}
       <div className="px-1 flex flex-col flex-grow">
-        <Link href={`/katalog/${product.id}`} className="block hover:text-[#A47251] transition-colors">
+        <Link href={`/katalog/${product.id}`} className="block hover:text-[#8B5E3C] transition-colors">
           <h3 className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 leading-snug mb-1">
             {product.name}
           </h3>
@@ -51,7 +51,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
         <div className="mt-auto pt-2">
           <div className="flex flex-col">
-            <span className="font-[family-name:var(--font-inter)] font-bold text-[#A47251] text-base leading-tight break-all">
+            <span className="font-[family-name:var(--font-inter)] font-bold text-[#8B5E3C] text-base leading-tight break-all">
               {product.price}
             </span>
             <span className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-slate-400 mt-0.5">

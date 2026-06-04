@@ -47,9 +47,9 @@ function ActionPopup({
               onClick={onEdit}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
                          font-[family-name:var(--font-inter)] text-[14px] font-medium text-slate-700
-                         hover:bg-[#F0D8A1]/30 hover:text-[#A47251] transition-all duration-150 active:scale-[0.98]"
+                         hover:bg-[#F0D8A1]/30 hover:text-[#8B5E3C] transition-all duration-150 active:scale-[0.98]"
             >
-              <Pencil size={17} strokeWidth={1.5} className="text-[#A47251]" />
+              <Pencil size={17} strokeWidth={1.5} className="text-[#8B5E3C]" />
               Ganti Gambar
             </button>
 
@@ -72,14 +72,14 @@ function ActionPopup({
 // ─── Image Slot ───────────────────────────────────────────────────────────────
 function ImageSlot({
   hero, onReplace, onDelete,
-}: { hero: HeroImage; onReplace: (id: string, url: string) => void; onDelete: (id: string) => void }) {
+}: { hero: HeroImage; onReplace: (id: string, file: File) => void; onDelete: (id: string) => void }) {
   const inputRef          = useRef<HTMLInputElement>(null);
   const [open, setOpen]   = useState(false);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onReplace(hero.id, URL.createObjectURL(file));
+    onReplace(hero.id, file);
     e.target.value = '';
     setOpen(false);
   };
@@ -128,13 +128,13 @@ function ImageSlot({
 }
 
 // ─── Add Slot ─────────────────────────────────────────────────────────────────
-function AddSlot({ onAdd }: { onAdd: (url: string) => void }) {
+function AddSlot({ onAdd }: { onAdd: (file: File) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onAdd(URL.createObjectURL(file));
+    onAdd(file);
     e.target.value = '';
   };
 
@@ -146,9 +146,9 @@ function AddSlot({ onAdd }: { onAdd: (url: string) => void }) {
       transition={{ duration: 0.2 }}
       className="flex flex-col items-center justify-center aspect-video rounded-2xl
                  border-2 border-dashed border-slate-200 bg-slate-50/50 cursor-pointer
-                 hover:border-[#A47251] hover:bg-[#F0D8A1]/10 transition-all duration-200"
+                 hover:border-[#8B5E3C] hover:bg-[#F0D8A1]/10 transition-all duration-200"
     >
-      <div className="w-10 h-10 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#A47251] mb-2">
+      <div className="w-10 h-10 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#8B5E3C] mb-2">
         <Plus size={20} strokeWidth={1.5} />
       </div>
       <p className="font-[family-name:var(--font-inter)] text-[13px] text-slate-500 font-medium">
@@ -167,8 +167,8 @@ export function HeroImageGrid({
   images, onAdd, onReplace, onDelete,
 }: {
   images: HeroImage[];
-  onAdd: (url: string) => void;
-  onReplace: (id: string, url: string) => void;
+  onAdd: (file: File) => void;
+  onReplace: (id: string, file: File) => void;
   onDelete: (id: string) => void;
 }) {
   return (

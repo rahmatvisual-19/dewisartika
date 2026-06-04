@@ -55,7 +55,7 @@ export function ClientCard({
           className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl
                      font-[family-name:var(--font-inter)] text-[12px] font-semibold
                      border border-slate-200 text-slate-600
-                     hover:border-[#A47251] hover:text-[#A47251] transition-all duration-200 active:scale-95"
+                     hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all duration-200 active:scale-95"
         >
           <Pencil size={13} strokeWidth={1.5} /> Edit
         </button>
@@ -74,13 +74,15 @@ export function ClientCard({
 }
 
 // ─── Form Modal ───────────────────────────────────────────────────────────────
+export type ClientFormData = Omit<ClientData, 'id'> & { logoFile?: File };
+
 interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (e: React.FormEvent<HTMLFormElement>) => void;
   isEditing: boolean;
-  formData: Omit<ClientData, 'id'>;
-  setFormData: React.Dispatch<React.SetStateAction<Omit<ClientData, 'id'>>>;
+  formData: ClientFormData;
+  setFormData: React.Dispatch<React.SetStateAction<ClientFormData>>;
 }
 
 export function ClientFormModal({ isOpen, onClose, onSave, isEditing, formData, setFormData }: ClientFormModalProps) {
@@ -89,13 +91,17 @@ export function ClientFormModal({ isOpen, onClose, onSave, isEditing, formData, 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setFormData(p => ({ ...p, logoUrl: URL.createObjectURL(file) }));
+    setFormData(p => ({
+      ...p,
+      logoUrl: URL.createObjectURL(file),
+      logoFile: file
+    }));
   };
 
   const inputClass =
     "w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 " +
     "font-[family-name:var(--font-inter)] text-sm text-slate-800 placeholder:text-slate-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-[#A47251]/30 focus:border-[#A47251] transition-all";
+    "focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all";
 
   const labelClass = "block font-[family-name:var(--font-inter)] text-[13px] font-semibold text-slate-700 mb-1.5";
 
@@ -142,7 +148,7 @@ export function ClientFormModal({ isOpen, onClose, onSave, isEditing, formData, 
                 <label className={labelClass}>Logo</label>
                 <label className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed
                                   border-slate-200 bg-slate-50/50 cursor-pointer
-                                  hover:border-[#A47251] hover:bg-[#F0D8A1]/10 transition-all duration-200 overflow-hidden">
+                                  hover:border-[#8B5E3C] hover:bg-[#F0D8A1]/10 transition-all duration-200 overflow-hidden">
                   {formData.logoUrl ? (
                     <div className="relative w-full h-28 flex items-center justify-center p-4">
                       <img src={formData.logoUrl} alt="Preview" className="max-h-full max-w-full object-contain" />
@@ -152,7 +158,7 @@ export function ClientFormModal({ isOpen, onClose, onSave, isEditing, formData, 
                     </div>
                   ) : (
                     <div className="py-6 flex flex-col items-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#A47251]">
+                      <div className="w-10 h-10 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#8B5E3C]">
                         <ImageIcon size={18} strokeWidth={1.5} />
                       </div>
                       <p className="font-[family-name:var(--font-inter)] text-[13px] text-slate-500">Klik untuk upload logo</p>
@@ -171,7 +177,7 @@ export function ClientFormModal({ isOpen, onClose, onSave, isEditing, formData, 
                   Batal
                 </button>
                 <button type="submit" disabled={!isValid}
-                  className="flex-1 py-2.5 rounded-xl bg-[#A47251] text-white
+                  className="flex-1 py-2.5 rounded-xl bg-[#8B5E3C] text-white
                              font-[family-name:var(--font-inter)] text-[13px] font-semibold
                              hover:bg-[#DD9E59] disabled:opacity-50 disabled:cursor-not-allowed
                              transition-all active:scale-95 shadow-[0_2px_8px_rgba(164,114,81,0.25)]">
@@ -246,9 +252,9 @@ export function AddClientSlot({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex flex-col items-center justify-center h-full min-h-[180px] rounded-2xl
                  border-2 border-dashed border-slate-200 bg-slate-50/50
-                 hover:border-[#A47251] hover:bg-[#F0D8A1]/10 transition-all duration-200"
+                 hover:border-[#8B5E3C] hover:bg-[#F0D8A1]/10 transition-all duration-200"
     >
-      <div className="w-10 h-10 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#A47251] mb-2">
+      <div className="w-10 h-10 rounded-full bg-[#F0D8A1]/40 flex items-center justify-center text-[#8B5E3C] mb-2">
         <Plus size={20} strokeWidth={1.5} />
       </div>
       <p className="font-[family-name:var(--font-inter)] text-[13px] text-slate-500 font-medium">
