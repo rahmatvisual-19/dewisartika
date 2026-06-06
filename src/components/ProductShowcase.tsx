@@ -1,35 +1,18 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';import Link from 'next/link';
+import { ArrowRight, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import SoftGradient from '@/components/SoftGradient';
-// ─── Data Produk ────────────────────────────────────────────────────────────
-const ALL_PRODUCTS = [
-  { id: 1,  name: 'Kain Sutra Premium',       category: 'Material Kain',   price: 'Rp 150.000', unit: '/meter', image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=800&auto=format&fit=crop' },
-  { id: 2,  name: 'Kancing Jas Eksklusif',    category: 'Aksesoris',       price: 'Rp 85.000',  unit: '/lusin', image: 'https://images.unsplash.com/photo-1556905055-8f358a7a4bb4?q=80&w=800&auto=format&fit=crop' },
-  { id: 3,  name: 'Custom Blazer Linen',      category: 'Jasa Tailoring',  price: 'Rp 1.850.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?q=80&w=800&auto=format&fit=crop' },
-  { id: 4,  name: 'Kemeja Katun Polos',       category: 'Ready to Wear',   price: 'Rp 450.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop' },
-  { id: 5,  name: 'Kain Batik Tulis Solo',    category: 'Material Kain',   price: 'Rp 320.000', unit: '/meter', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800&auto=format&fit=crop' },
-  { id: 6,  name: 'Celana Chino Slim Fit',    category: 'Ready to Wear',   price: 'Rp 380.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?q=80&w=800&auto=format&fit=crop' },
-  { id: 7,  name: 'Benang Sulam Premium',     category: 'Aksesoris',       price: 'Rp 45.000',  unit: '/set',  image: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?q=80&w=800&auto=format&fit=crop' },
-  { id: 8,  name: 'Jas Formal Wol Italia',    category: 'Jasa Tailoring',  price: 'Rp 3.200.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop' },
-  { id: 9,  name: 'Kain Denim Premium',       category: 'Material Kain',   price: 'Rp 95.000',  unit: '/meter', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=800&auto=format&fit=crop' },
-  { id: 10, name: 'Dress Kebaya Modern',      category: 'Jasa Tailoring',  price: 'Rp 2.100.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=800&auto=format&fit=crop' },
-  { id: 11, name: 'Kancing Mutiara Set',      category: 'Aksesoris',       price: 'Rp 120.000', unit: '/set',  image: 'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?q=80&w=800&auto=format&fit=crop' },
-  { id: 12, name: 'Polo Shirt Pique',         category: 'Ready to Wear',   price: 'Rp 290.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?q=80&w=800&auto=format&fit=crop' },
-  { id: 13, name: 'Kain Velvet Mewah',        category: 'Material Kain',   price: 'Rp 210.000', unit: '/meter', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=800&auto=format&fit=crop' },
-  { id: 14, name: 'Jaket Kulit Sintetis',     category: 'Ready to Wear',   price: 'Rp 890.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=800&auto=format&fit=crop' },
-  { id: 15, name: 'Gaun Pesta Custom',        category: 'Jasa Tailoring',  price: 'Rp 2.750.000', unit: '/biji', image: 'https://images.unsplash.com/photo-1566479179817-c0b5b4b4b1e5?q=80&w=800&auto=format&fit=crop' },
-  { id: 16, name: 'Resleting YKK Premium',    category: 'Aksesoris',       price: 'Rp 25.000',  unit: '/pcs',  image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800&auto=format&fit=crop' },
-];
+import { supabase } from '@/lib/supabase';
+import ProductCard, { Product } from '@/components/ProductCard';
 
 // ─── Konstanta ───────────────────────────────────────────────────────────────
 const DESKTOP_PAGE_SIZE   = 12; // produk per batch infinite scroll
 const DESKTOP_AUTO_LOADS  = 3;  // berapa kali auto-load sebelum muncul tombol
 const TABLET_PAGE_SIZE    = 8;  // produk per halaman pagination
 const MOBILE_INITIAL      = 6;  // produk awal di mobile
-const MOBILE_LOAD_MORE    = 4;  // tambahan produk per klik "Lihat Lainnya"
 
 // ─── Animasi ─────────────────────────────────────────────────────────────────
 const containerVariants = {
@@ -37,17 +20,11 @@ const containerVariants = {
   visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
 
-const cardVariants = {
-  hidden:  { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' as const } },
-  exit:    { opacity: 0, y: -12, transition: { duration: 0.25 } },
-};
-
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col">
-      <div className="w-full aspect-square md:aspect-[4/5] rounded-xl bg-slate-100 mb-4 overflow-hidden">
+    <div className="bg-white rounded-[24px] border border-slate-100 p-3 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col">
+      <div className="w-full aspect-[4/3] rounded-[18px] bg-slate-100 mb-4 overflow-hidden">
         <div className="w-full h-full animate-pulse bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 bg-[length:200%_100%]"
              style={{ animation: 'shimmer 1.5s infinite linear' }} />
       </div>
@@ -60,65 +37,16 @@ function SkeletonCard() {
   );
 }
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product }: { product: typeof ALL_PRODUCTS[0] }) {
-  return (
-    <motion.div
-      variants={cardVariants}
-      layout
-      className="bg-white rounded-2xl border border-gray-100 p-3
-                 shadow-[0_4px_20px_rgba(0,0,0,0.03)]
-                 hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)]
-                 transition-shadow duration-300 flex flex-col group h-full"
-    >
-      {/* Gambar */}
-      <Link href={`/katalog/${product.id}`} className="block">
-        <div className="relative w-full aspect-square md:aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 mb-4">
-          <img
-            src={product.image}
-            alt={`${product.name} - ${product.category}`}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        </div>
-      </Link>
-
-      {/* Info */}
-      <div className="px-1 flex flex-col flex-grow">
-        <Link href={`/katalog/${product.id}`} className="inline-block py-1 min-h-[24px] hover:text-[#8B5E3C] transition-colors">
-          <h3 className="font-[family-name:var(--font-inter)] text-[14px] font-semibold text-slate-800 leading-snug">
-            {product.name}
-          </h3>
-        </Link>
-        <p className="font-[family-name:var(--font-inter)] text-[12px] text-[#596A80] mt-1 mb-4">
-          {product.category}
-        </p>
-
-        <div className="mt-auto pt-2">
-          <div className="flex flex-col">
-            <span className="font-[family-name:var(--font-inter)] font-bold text-[#8B5E3C] text-base leading-tight break-all">
-              {product.price}
-            </span>
-            <span className="font-[family-name:var(--font-inter)] text-[11px] font-medium text-[#596A80] mt-0.5">
-              {product.unit}
-            </span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // ─── DESKTOP: Infinite Scroll dengan Stop Point ───────────────────────────────
-function DesktopView() {
+function DesktopView({ products }: { products: Product[] }) {
   const [visibleCount, setVisibleCount]   = useState(DESKTOP_PAGE_SIZE);
   const [autoLoadCount, setAutoLoadCount] = useState(0);
   const [isLoading, setIsLoading]         = useState(false);
   const sentinelRef                       = useRef<HTMLDivElement>(null);
   const debounceRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const visibleProducts = ALL_PRODUCTS.slice(0, visibleCount);
-  const hasMore         = visibleCount < ALL_PRODUCTS.length;
+  const visibleProducts = products.slice(0, visibleCount);
+  const hasMore         = visibleCount < products.length;
   const showManualBtn   = hasMore && autoLoadCount >= DESKTOP_AUTO_LOADS;
 
   const loadMore = useCallback(() => {
@@ -126,11 +54,11 @@ function DesktopView() {
     setIsLoading(true);
     // Simulasi network delay
     setTimeout(() => {
-      setVisibleCount(prev => Math.min(prev + DESKTOP_PAGE_SIZE, ALL_PRODUCTS.length));
+      setVisibleCount(prev => Math.min(prev + DESKTOP_PAGE_SIZE, products.length));
       setAutoLoadCount(prev => prev + 1);
       setIsLoading(false);
     }, 600);
-  }, [isLoading, hasMore]);
+  }, [isLoading, hasMore, products.length]);
 
   // Debounced Intersection Observer untuk infinite scroll
   useEffect(() => {
@@ -207,12 +135,12 @@ function DesktopView() {
 }
 
 // ─── TABLET: Pagination Angka (iOS Style) ────────────────────────────────────
-function TabletView() {
-  const totalPages    = Math.ceil(ALL_PRODUCTS.length / TABLET_PAGE_SIZE);
+function TabletView({ products }: { products: Product[] }) {
+  const totalPages    = Math.ceil(products.length / TABLET_PAGE_SIZE);
   const [page, setPage] = useState(1);
 
   const start    = (page - 1) * TABLET_PAGE_SIZE;
-  const products = ALL_PRODUCTS.slice(start, start + TABLET_PAGE_SIZE);
+  const visibleProducts = products.slice(start, start + TABLET_PAGE_SIZE);
 
   const goTo = (p: number) => {
     setPage(p);
@@ -239,7 +167,7 @@ function TabletView() {
           animate="visible"
           exit={{ opacity: 0, transition: { duration: 0.2 } }}
         >
-          {products.map(p => <ProductCard key={p.id} product={p} />)}
+          {visibleProducts.map(p => <ProductCard key={p.id} product={p} />)}
         </motion.div>
       </AnimatePresence>
 
@@ -303,8 +231,9 @@ function TabletView() {
 }
 
 // ─── MOBILE: View More Button ─────────────────────────────────────────────────
-function MobileView() {
-  const products = ALL_PRODUCTS.slice(0, MOBILE_INITIAL);
+// Tampilkan limit awal, lalu ada tombol Lihat Koleksi Lainnya ke /katalog
+function MobileView({ products }: { products: Product[] }) {
+  const visibleProducts = products.slice(0, MOBILE_INITIAL);
 
   return (
     <>
@@ -315,7 +244,7 @@ function MobileView() {
         animate="visible"
       >
         <AnimatePresence mode="popLayout">
-          {products.map(p => <ProductCard key={p.id} product={p} />)}
+          {visibleProducts.map(p => <ProductCard key={p.id} product={p} />)}
         </AnimatePresence>
       </motion.div>
 
@@ -346,8 +275,42 @@ function MobileView() {
 // ─── Responsive Wrapper ───────────────────────────────────────────────────────
 export default function ProductShowcase() {
   const [view, setView] = useState<'mobile' | 'tablet' | 'desktop' | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          setProducts(data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(p.price)),
+            unit: p.unit,
+            image: p.images?.[0] || 'https://images.unsplash.com/photo-1556905055-8f358a7a4bb4?q=80&w=800&auto=format&fit=crop',
+            desc: p.description || '',
+            colors: p.colors || [],
+            sizes: p.sizes || [],
+            details: p.details || [],
+            images: p.images || []
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching products for showcase:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+
     const update = () => {
       const w = window.innerWidth;
       if (w < 768)        setView('mobile');
@@ -409,15 +372,17 @@ export default function ProductShowcase() {
           </motion.div>
         </div>
 
-        {/* Render hanya view yang sesuai — tidak ada hidden div yang memakan ruang */}
-        {view === 'mobile'  && <MobileView />}
-        {view === 'tablet'  && <TabletView />}
-        {view === 'desktop' && <DesktopView />}
-        {/* Skeleton awal sebelum JS hydration */}
-        {view === null && (
+        {/* Render loading state or views */}
+        {loading || view === null ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" aria-busy="true" aria-label="Memuat produk">
             {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
+        ) : (
+          <>
+            {view === 'mobile'  && <MobileView products={products} />}
+            {view === 'tablet'  && <TabletView products={products} />}
+            {view === 'desktop' && <DesktopView products={products} />}
+          </>
         )}
 
       </div>

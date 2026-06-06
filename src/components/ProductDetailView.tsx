@@ -114,6 +114,11 @@ export default function ProductDetailView({ product }: { product: ProductData })
             price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(p.price)),
             unit: p.unit,
             image: p.images?.[0] || 'https://images.unsplash.com/photo-1556905055-8f358a7a4bb4?q=80&w=800&auto=format&fit=crop',
+            desc: p.desc || '',
+            colors: p.colors || [],
+            sizes: p.sizes || [],
+            details: p.details || [],
+            images: p.images || []
           })));
         } else {
           setProductsList(FALLBACK_PRODUCTS);

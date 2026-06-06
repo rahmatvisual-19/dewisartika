@@ -12,8 +12,21 @@ export default function OrdersAdminPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'day' | 'week' | 'month' | 'year'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
+  // Custom Filter Input States
+  const [filterDay, setFilterDay] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterWeekStart, setFilterWeekStart] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [filterWeekEnd, setFilterWeekEnd] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterMonth, setFilterMonth] = useState(() => new Date().getMonth());
+  const [filterYear, setFilterYear] = useState(() => new Date().getFullYear());
+  const [filterYearOnly, setFilterYearOnly] = useState(() => new Date().getFullYear());
 
   // Edit Modal States
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -166,25 +179,32 @@ export default function OrdersAdminPage() {
     }
   };
 
-  const getFilteredOrders = () => {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const oneWeekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
-
+  const getTimeSearchFilteredOrders = () => {
     return orders.filter(order => {
       // 1. Time Filter
-      const orderTime = new Date(order.created_at).getTime();
       let matchTime = true;
+      const orderDate = new Date(order.created_at);
+
       if (filter === 'day') {
-        matchTime = orderTime >= todayStart;
+        const orderDayStr = orderDate.getFullYear() + '-' +
+          String(orderDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(orderDate.getDate()).padStart(2, '0');
+        matchTime = orderDayStr === filterDay;
       } else if (filter === 'week') {
-        matchTime = orderTime >= oneWeekAgo;
+        const startMs = new Date(filterWeekStart + 'T00:00:00').getTime();
+        const endMs = new Date(filterWeekEnd + 'T23:59:59').getTime();
+        const isRangeValid = (endMs - startMs) >= 6.9 * 24 * 60 * 60 * 1000;
+        
+        if (isRangeValid) {
+          const orderTime = orderDate.getTime();
+          matchTime = orderTime >= startMs && orderTime <= endMs;
+        } else {
+          matchTime = false;
+        }
       } else if (filter === 'month') {
-        matchTime = orderTime >= monthStart;
+        matchTime = orderDate.getMonth() === Number(filterMonth) && orderDate.getFullYear() === Number(filterYear);
       } else if (filter === 'year') {
-        matchTime = orderTime >= yearStart;
+        matchTime = orderDate.getFullYear() === Number(filterYearOnly);
       }
 
       // 2. Search Filter
@@ -203,30 +223,83 @@ export default function OrdersAdminPage() {
     });
   };
 
+  const timeSearchFilteredOrders = getTimeSearchFilteredOrders();
+
+  const getFilteredOrders = () => {
+    if (statusFilter === 'all') return timeSearchFilteredOrders;
+    return timeSearchFilteredOrders.filter(order => order.status === statusFilter);
+  };
+
   const filteredOrders = getFilteredOrders();
 
-  // Pendapatan & Jumlah dari pesanan terfilter
+  // Pendapatan dari pesanan hasil filter akhir (jika statusFilter 'all', kita kecualikan pesanan batal. Jika disaring ke status tertentu, kita tampilkan nominal status tersebut).
   const totalRevenue = filteredOrders.reduce((acc, order) => {
-    if (order.status !== 'cancelled') {
-      return acc + order.grand_total;
+    if (statusFilter === 'all') {
+      return order.status !== 'cancelled' ? acc + order.grand_total : acc;
     }
-    return acc;
+    return acc + order.grand_total;
   }, 0);
 
-  const pendingCount = filteredOrders.filter(o => o.status === 'pending').length;
-  const processingCount = filteredOrders.filter(o => o.status === 'processing').length;
-  const completedCount = filteredOrders.filter(o => o.status === 'completed').length;
-  const cancelledCount = filteredOrders.filter(o => o.status === 'cancelled').length;
+  // Subtitle deskripsi jumlah pesanan pada total pendapatan
+  const getRevenueSubtitle = () => {
+    if (statusFilter === 'all') {
+      const nonCancelledCount = filteredOrders.filter(o => o.status !== 'cancelled').length;
+      return `Dari ${nonCancelledCount} pesanan (di luar pesanan batal)`;
+    }
+    const statusLabelMap: Record<string, string> = {
+      pending: 'pending',
+      processing: 'dalam proses',
+      completed: 'selesai',
+      cancelled: 'dibatalkan'
+    };
+    return `Dari ${filteredOrders.length} pesanan ${statusLabelMap[statusFilter] || ''}`;
+  };
+
+  // Statistik dihitung dari data waktu & pencarian saja (sebelum filter status) agar filter status tidak mematikan angka kartu lainnya
+  const pendingCount = timeSearchFilteredOrders.filter(o => o.status === 'pending').length;
+  const processingCount = timeSearchFilteredOrders.filter(o => o.status === 'processing').length;
+  const completedCount = timeSearchFilteredOrders.filter(o => o.status === 'completed').length;
+  const cancelledCount = timeSearchFilteredOrders.filter(o => o.status === 'cancelled').length;
 
   const formatRupiah = (val: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
 
+  const formatDateIndo = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const MONTHS_INDO = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
   const getFilterText = () => {
-    if (filter === 'day') return 'Hari Ini';
-    if (filter === 'week') return 'Minggu Ini';
-    if (filter === 'month') return 'Bulan Ini';
-    if (filter === 'year') return 'Tahun Ini';
-    return 'Semua Periode';
+    let periodText = '';
+    if (filter === 'day') periodText = `Hari/Tanggal: ${formatDateIndo(filterDay)}`;
+    else if (filter === 'week') {
+      const startMs = new Date(filterWeekStart + 'T00:00:00').getTime();
+      const endMs = new Date(filterWeekEnd + 'T23:59:59').getTime();
+      const isRangeValid = (endMs - startMs) >= 6.9 * 24 * 60 * 60 * 1000;
+      if (!isRangeValid) periodText = 'Rentang Mingguan (Tidak Valid - Jarak Min. 7 Hari)';
+      else periodText = `Mingguan: ${formatDateIndo(filterWeekStart)} s.d. ${formatDateIndo(filterWeekEnd)}`;
+    }
+    else if (filter === 'month') periodText = `Bulanan: ${MONTHS_INDO[filterMonth]} ${filterYear}`;
+    else if (filter === 'year') periodText = `Tahunan: Tahun ${filterYearOnly}`;
+    else periodText = 'Semua Periode';
+
+    if (statusFilter !== 'all') {
+      const statusLabelMap: Record<string, string> = {
+        pending: 'Pending (Menunggu)',
+        processing: 'Processing (Proses)',
+        completed: 'Completed (Selesai)',
+        cancelled: 'Cancelled (Batal)'
+      };
+      return `${periodText} | Status: ${statusLabelMap[statusFilter]}`;
+    }
+    return periodText;
   };
 
   const handlePrint = () => {
@@ -252,7 +325,46 @@ export default function OrdersAdminPage() {
       {/* CSS Cetak Khusus agar Laporan PDF Rapi */}
       <style jsx global>{`
         @media print {
-          /* Sembunyikan elemen dashboard UI utama */
+          /* Reset root layout untuk mode cetak */
+          html, body {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+          }
+          /* Sembunyikan sidebar desktop, mobile sidebar, dan header admin */
+          div.hidden.lg\:block,
+          .lg\:hidden,
+          header,
+          .no-print {
+            display: none !important;
+          }
+          /* Matikan flexbox height/scroll pada layout pembungkus utama admin */
+          .flex.h-screen {
+            display: block !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            background: transparent !important;
+          }
+          main {
+            display: block !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          /* Hapus padding pembungkus utama di layout */
+          .p-4.sm\:p-6.md\:p-8 {
+            padding: 0 !important;
+            margin: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          /* Sembunyikan elemen dashboard UI utama secara umum */
           body * {
             visibility: hidden;
           }
@@ -261,15 +373,13 @@ export default function OrdersAdminPage() {
             visibility: visible;
           }
           #print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 10px;
-            color: #000;
-          }
-          .no-print {
-            display: none !important;
+            position: relative !important;
+            display: block !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #fff !important;
+            color: #000 !important;
           }
         }
       `}</style>
@@ -318,12 +428,20 @@ export default function OrdersAdminPage() {
             </p>
           </div>
           <p className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400 mt-2">
-            Dari {filteredOrders.length} pesanan (di luar pesanan batal)
+            {getRevenueSubtitle()}
           </p>
         </div>
 
         {/* Card 2: Pending */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between min-h-[110px] border-l-4 border-l-amber-400">
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
+          className={`p-4 rounded-2xl border flex flex-col justify-between min-h-[110px] border-l-4 border-l-amber-400 cursor-pointer transition-all active:scale-98 hover:shadow-md hover:-translate-y-0.5
+            ${statusFilter === 'pending'
+              ? 'bg-amber-50/25 border-amber-300 ring-2 ring-amber-400/20 shadow-xs'
+              : 'bg-white border-slate-100 shadow-xs'
+            }`}
+          title="Klik untuk memfilter status Pending"
+        >
           <div>
             <p className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">
               Pending
@@ -338,7 +456,15 @@ export default function OrdersAdminPage() {
         </div>
 
         {/* Card 3: Proses */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between min-h-[110px] border-l-4 border-l-blue-400">
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'processing' ? 'all' : 'processing')}
+          className={`p-4 rounded-2xl border flex flex-col justify-between min-h-[110px] border-l-4 border-l-blue-400 cursor-pointer transition-all active:scale-98 hover:shadow-md hover:-translate-y-0.5
+            ${statusFilter === 'processing'
+              ? 'bg-blue-50/25 border-blue-300 ring-2 ring-blue-400/20 shadow-xs'
+              : 'bg-white border-slate-100 shadow-xs'
+            }`}
+          title="Klik untuk memfilter status Proses"
+        >
           <div>
             <p className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">
               Proses
@@ -353,7 +479,15 @@ export default function OrdersAdminPage() {
         </div>
 
         {/* Card 4: Selesai */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between min-h-[110px] border-l-4 border-l-emerald-400">
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'completed' ? 'all' : 'completed')}
+          className={`p-4 rounded-2xl border flex flex-col justify-between min-h-[110px] border-l-4 border-l-emerald-400 cursor-pointer transition-all active:scale-98 hover:shadow-md hover:-translate-y-0.5
+            ${statusFilter === 'completed'
+              ? 'bg-emerald-50/25 border-emerald-300 ring-2 ring-emerald-400/20 shadow-xs'
+              : 'bg-white border-slate-100 shadow-xs'
+            }`}
+          title="Klik untuk memfilter status Selesai"
+        >
           <div>
             <p className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">
               Selesai
@@ -368,7 +502,15 @@ export default function OrdersAdminPage() {
         </div>
 
         {/* Card 5: Batal */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between min-h-[110px] border-l-4 border-l-rose-400">
+        <div
+          onClick={() => setStatusFilter(statusFilter === 'cancelled' ? 'all' : 'cancelled')}
+          className={`p-4 rounded-2xl border flex flex-col justify-between min-h-[110px] border-l-4 border-l-rose-400 cursor-pointer transition-all active:scale-98 hover:shadow-md hover:-translate-y-0.5
+            ${statusFilter === 'cancelled'
+              ? 'bg-rose-50/25 border-rose-300 ring-2 ring-rose-400/20 shadow-xs'
+              : 'bg-white border-slate-100 shadow-xs'
+            }`}
+          title="Klik untuk memfilter status Batal"
+        >
           <div>
             <p className="font-[family-name:var(--font-inter)] text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">
               Batal
@@ -384,32 +526,56 @@ export default function OrdersAdminPage() {
       </div>
 
       {/* ── Penyaringan & Pencarian (no-print) ── */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between no-print">
-        {/* Buttons Filter Waktu */}
-        <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
-          {[
-            { label: 'Semua', val: 'all' },
-            { label: 'Hari Ini', val: 'day' },
-            { label: 'Minggu Ini', val: 'week' },
-            { label: 'Bulan Ini', val: 'month' },
-            { label: 'Tahun Ini', val: 'year' },
-          ].map(btn => (
-            <button
-              key={btn.val}
-              onClick={() => setFilter(btn.val as any)}
-              className={`px-3 py-1.5 rounded-lg font-[family-name:var(--font-inter)] text-[12px] font-semibold transition-all cursor-pointer
-                         ${filter === btn.val
-                           ? 'bg-[#8B5E3C]/10 text-[#8B5E3C] border border-[#8B5E3C]/20'
-                           : 'bg-transparent text-slate-500 hover:bg-slate-50 border border-transparent'
-                         }`}
-            >
-              {btn.label}
-            </button>
-          ))}
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col lg:flex-row gap-4 items-center justify-between no-print">
+        {/* Left Side: Time and Status Filters */}
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          {/* Buttons Filter Waktu */}
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: 'Semua', val: 'all' },
+              { label: 'Per Hari', val: 'day' },
+              { label: 'Per Minggu', val: 'week' },
+              { label: 'Per Bulan', val: 'month' },
+              { label: 'Per Tahun', val: 'year' },
+            ].map(btn => (
+              <button
+                key={btn.val}
+                onClick={() => setFilter(btn.val as any)}
+                className={`px-3 py-1.5 rounded-lg font-[family-name:var(--font-inter)] text-[12px] font-semibold transition-all cursor-pointer
+                           ${filter === btn.val
+                             ? 'bg-[#8B5E3C]/10 text-[#8B5E3C] border border-[#8B5E3C]/20'
+                             : 'bg-transparent text-slate-500 hover:bg-slate-50 border border-transparent'
+                           }`}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 text-xs font-medium font-[family-name:var(--font-inter)]">Status:</span>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value as any)}
+                className="h-9 pl-3 pr-8 rounded-xl border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] bg-slate-50/50 transition-all cursor-pointer font-semibold appearance-none"
+              >
+                <option value="all">Semua Status</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Proses</option>
+                <option value="completed">Selesai</option>
+                <option value="cancelled">Batal</option>
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+            </div>
+          </div>
         </div>
 
         {/* Input Pencarian */}
-        <div className="relative w-full md:w-80 shrink-0">
+        <div className="relative w-full lg:w-80 shrink-0">
           <input
             type="text"
             placeholder="Cari ID, nama, no. WA, alamat..."
@@ -420,6 +586,147 @@ export default function OrdersAdminPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
         </div>
       </div>
+
+      {/* ── Penyaringan Kustom Input Panel (no-print) ── */}
+      <AnimatePresence>
+        {filter !== 'all' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs no-print overflow-hidden -mt-2"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 text-xs">
+              {filter === 'day' && (
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                    Pilih Tanggal
+                  </label>
+                  <input
+                    type="date"
+                    value={filterDay}
+                    onChange={e => setFilterDay(e.target.value)}
+                    className="h-9 px-3 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] focus:border-[#8B5E3C] bg-slate-50/50"
+                  />
+                </div>
+              )}
+
+              {filter === 'week' && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 w-full">
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      Tanggal Mulai
+                    </label>
+                    <input
+                      type="date"
+                      value={filterWeekStart}
+                      onChange={e => setFilterWeekStart(e.target.value)}
+                      className="h-9 px-3 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] focus:border-[#8B5E3C] bg-slate-50/50"
+                    />
+                  </div>
+                  <span className="h-9 flex items-center text-slate-400 hidden sm:inline-block pt-5">—</span>
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      Tanggal Selesai
+                    </label>
+                    <input
+                      type="date"
+                      value={filterWeekEnd}
+                      onChange={e => setFilterWeekEnd(e.target.value)}
+                      className="h-9 px-3 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] focus:border-[#8B5E3C] bg-slate-50/50"
+                    />
+                  </div>
+
+                  {/* Warning range validator */}
+                  {(() => {
+                    const startMs = new Date(filterWeekStart + 'T00:00:00').getTime();
+                    const endMs = new Date(filterWeekEnd + 'T23:59:59').getTime();
+                    const isRangeValid = (endMs - startMs) >= 6.9 * 24 * 60 * 60 * 1000;
+                    if (!isRangeValid) {
+                      return (
+                        <div className="h-9 flex items-center text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-1 font-semibold text-[11px] mt-2 sm:mt-0 animate-pulse">
+                          ⚠️ Jarak tanggal minimal harus 7 hari!
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+
+              {filter === 'month' && (
+                <div className="flex gap-3">
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      Bulan
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={filterMonth}
+                        onChange={e => setFilterMonth(Number(e.target.value))}
+                        className="h-9 pl-3 pr-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] bg-slate-50/50 appearance-none cursor-pointer font-medium"
+                      >
+                        {MONTHS_INDO.map((m, idx) => (
+                          <option key={idx} value={idx}>{m}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                      Tahun
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={filterYear}
+                        onChange={e => setFilterYear(Number(e.target.value))}
+                        className="h-9 pl-3 pr-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] bg-slate-50/50 appearance-none cursor-pointer font-medium"
+                      >
+                        {(() => {
+                          const years = [];
+                          const cy = new Date().getFullYear();
+                          for (let y = cy + 1; y >= 2024; y--) years.push(y);
+                          return years.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                          ));
+                        })()}
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {filter === 'year' && (
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">
+                    Tahun
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={filterYearOnly}
+                      onChange={e => setFilterYearOnly(Number(e.target.value))}
+                      className="h-9 pl-3 pr-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] bg-slate-50/50 appearance-none cursor-pointer font-medium"
+                    >
+                      {(() => {
+                        const years = [];
+                        const cy = new Date().getFullYear();
+                        for (let y = cy + 1; y >= 2024; y--) years.push(y);
+                        return years.map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ));
+                      })()}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Tabel Pesanan Utama (no-print) ── */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-xs overflow-hidden no-print">
@@ -650,16 +957,19 @@ export default function OrdersAdminPage() {
                     <label className="block font-[family-name:var(--font-inter)] text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                       Status Transaksi
                     </label>
-                    <select
-                      value={editStatus}
-                      onChange={e => setEditStatus(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all bg-slate-50/50"
-                    >
-                      <option value="pending">Pending (Menunggu)</option>
-                      <option value="processing">Processing (Proses)</option>
-                      <option value="completed">Completed (Selesai)</option>
-                      <option value="cancelled">Cancelled (Dibatalkan)</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={editStatus}
+                        onChange={e => setEditStatus(e.target.value)}
+                        className="w-full pl-3 pr-10 py-2.5 rounded-xl border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition-all bg-slate-50/50 appearance-none cursor-pointer font-semibold"
+                      >
+                        <option value="pending">Pending (Menunggu)</option>
+                        <option value="processing">Processing (Proses)</option>
+                        <option value="completed">Completed (Selesai)</option>
+                        <option value="cancelled">Cancelled (Dibatalkan)</option>
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
+                    </div>
                   </div>
                 </div>
 

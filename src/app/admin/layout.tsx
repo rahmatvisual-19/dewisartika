@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { PanelLeft, Loader2 } from 'lucide-react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { supabase } from '@/lib/supabase';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname();
@@ -70,19 +71,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/* ── Sidebar Mobile (drawer overlay) ── */}
-      {open && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          {/* Drawer */}
-          <div className="relative z-50 animate-in slide-in-from-left duration-200">
-            <AdminSidebar onClose={() => setOpen(false)} />
+      <AnimatePresence>
+        {open && (
+          <div className="lg:hidden fixed inset-0 z-40 flex">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-none"
+              onClick={() => setOpen(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="relative z-50 h-full flex"
+            >
+              <AdminSidebar onClose={() => setOpen(false)} />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* ── Konten Utama ── */}
       <main className="flex-1 overflow-y-auto flex flex-col min-w-0">
