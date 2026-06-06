@@ -102,7 +102,7 @@ export default async function Home() {
   };
 
   return (
-    <main className="pt-[68px] bg-white">
+    <main className="pt-0 md:pt-[68px] bg-white">
       <HeroSection
         title={heroData.title}
         subtitle={heroData.subtitle}
