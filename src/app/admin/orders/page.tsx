@@ -37,7 +37,9 @@ export default function OrdersAdminPage() {
   const [editCustNotes, setEditCustNotes] = useState('');
   const [editStatus, setEditStatus] = useState('pending');
   const [editItems, setEditItems] = useState<any[]>([]);
+  const [editDiscount, setEditDiscount] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [dbProducts, setDbProducts] = useState<any[]>([]);
 
   useEffect(() => {
     fetchOrders();
@@ -46,16 +48,24 @@ export default function OrdersAdminPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (*)
-        `)
-        .order('created_at', { ascending: false });
+      const [ordersRes, productsRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (*)
+          `)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('products')
+          .select('*')
+      ]);
 
-      if (error) throw error;
-      setOrders(data || []);
+      if (ordersRes.error) throw ordersRes.error;
+      if (productsRes.error) throw productsRes.error;
+
+      setOrders(ordersRes.data || []);
+      setDbProducts(productsRes.data || []);
     } catch (err: any) {
       console.error('Error fetching orders:', err);
       alert(`Gagal mengambil data pesanan: ${err.message}`);
@@ -84,6 +94,29 @@ export default function OrdersAdminPage() {
     }
   };
 
+  const getProductOptions = (productId: any) => {
+    if (!productId) return { colors: [], sizes: [], units: [] };
+    const p = dbProducts.find((prod: any) => prod.id === productId);
+    if (!p) return { colors: [], sizes: [], units: [] };
+
+    let colors: string[] = [];
+    if (Array.isArray(p.colors)) {
+      colors = p.colors.map((c: any) => typeof c === 'object' && c ? c.color : c).filter(Boolean);
+    }
+
+    let sizes: string[] = [];
+    if (Array.isArray(p.sizes)) {
+      sizes = p.sizes.map((s: any) => typeof s === 'object' && s ? s.size : s).filter(Boolean);
+    }
+
+    let units: string[] = [];
+    if (p.unit) {
+      units = p.unit.split(',').map((u: string) => u.trim()).filter(Boolean);
+    }
+
+    return { colors, sizes, units };
+  };
+
   const handleEditClick = (order: any) => {
     setEditingOrder(order);
     setEditCustName(order.customer_name || '');
@@ -91,14 +124,40 @@ export default function OrdersAdminPage() {
     setEditCustAddress(order.customer_address || '');
     setEditCustNotes(order.catatan || '');
     setEditStatus(order.status || 'pending');
-    setEditItems(order.order_items ? JSON.parse(JSON.stringify(order.order_items)) : []);
+    
+    const items = order.order_items ? JSON.parse(JSON.stringify(order.order_items)) : [];
+    const itemsWithRawQty = items.map((item: any) => ({
+      ...item,
+      _rawQty: item.quantity ? item.quantity.toString().replace(/\./g, ',') : '0'
+    }));
+    setEditItems(itemsWithRawQty);
+
+    const discountVal = (order.subtotal || 0) - (order.grand_total || 0);
+    setEditDiscount(discountVal > 0 ? discountVal : 0);
     setIsEditOpen(true);
   };
 
   const handleItemQtyChange = (idx: number, delta: number) => {
     const next = [...editItems];
     const newQty = Math.max(0.1, Number(next[idx].quantity || 0) + delta);
-    next[idx].quantity = Math.round(newQty * 100) / 100;
+    const rounded = Math.round(newQty * 100) / 100;
+    next[idx].quantity = rounded;
+    next[idx]._rawQty = rounded.toString().replace(/\./g, ',');
+    setEditItems(next);
+  };
+
+  const handleItemQtyInput = (idx: number, rawValue: string) => {
+    const next = [...editItems];
+    next[idx]._rawQty = rawValue;
+    
+    // Replace comma with dot for validation/parsing
+    const normalized = rawValue.replace(/,/g, '.');
+    const parsed = parseFloat(normalized);
+    if (!isNaN(parsed) && parsed >= 0) {
+      next[idx].quantity = parsed;
+    } else if (rawValue === '') {
+      next[idx].quantity = 0;
+    }
     setEditItems(next);
   };
 
@@ -109,6 +168,30 @@ export default function OrdersAdminPage() {
     setEditItems(next);
   };
 
+  const handleItemNameChange = (idx: number, val: string) => {
+    const next = [...editItems];
+    next[idx].name = val;
+    setEditItems(next);
+  };
+
+  const handleItemColorChange = (idx: number, val: string) => {
+    const next = [...editItems];
+    next[idx].color = val || null;
+    setEditItems(next);
+  };
+
+  const handleItemSizeChange = (idx: number, val: string) => {
+    const next = [...editItems];
+    next[idx].size = val || null;
+    setEditItems(next);
+  };
+
+  const handleItemUnitChange = (idx: number, val: string) => {
+    const next = [...editItems];
+    next[idx].unit = val || 'pcs';
+    setEditItems(next);
+  };
+
   const handleSaveEdit = async () => {
     if (!editingOrder) return;
     if (!editCustName.trim()) {
@@ -116,11 +199,24 @@ export default function OrdersAdminPage() {
       return;
     }
 
+    // Validasi kuantitas item jahit/produk
+    for (let i = 0; i < editItems.length; i++) {
+      const item = editItems[i];
+      const normalized = (item._rawQty !== undefined ? item._rawQty : item.quantity.toString()).replace(/,/g, '.');
+      const parsed = parseFloat(normalized);
+      if (isNaN(parsed) || parsed <= 0) {
+        alert(`Kuantitas untuk item "${item.name}" tidak valid atau harus lebih besar dari 0.`);
+        return;
+      }
+      // Sinkronkan nilai numerik aktual ke item sebelum disimpan/dihitung
+      item.quantity = parsed;
+    }
+
     setSaving(true);
     try {
-      // Hitung subtotal dan grandtotal baru
+      // Hitung subtotal dan grandtotal baru dengan diskon
       const newSubtotal = editItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-      const newGrandtotal = newSubtotal; // Estimasi pajak ditiadakan
+      const newGrandtotal = Math.max(0, newSubtotal - editDiscount);
 
       // 1. Update data orders utama
       const { error: orderError } = await supabase
@@ -854,29 +950,48 @@ export default function OrdersAdminPage() {
                                 <p className="font-bold text-slate-800 uppercase tracking-wider text-[10px] text-slate-400 mb-1">Daftar Barang Belanjaan</p>
                                 <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-2xs divide-y divide-slate-50">
                                   {order.order_items && order.order_items.length > 0 ? (
-                                    order.order_items.map((item: any, idx: number) => (
-                                      <div key={item.id || idx} className="p-3.5 flex justify-between items-center text-[12.5px]">
-                                        <div>
-                                          <p className="font-semibold text-slate-800">{item.name}</p>
-                                          <div className="flex gap-2 text-[10.5px] text-slate-400 mt-1 font-medium">
-                                            {item.color && <span>Warna: {item.color}</span>}
-                                            {item.size && <span>Ukuran: {item.size}</span>}
-                                            {item.unit && <span>Satuan: {item.unit}</span>}
+                                    <>
+                                      {order.order_items.map((item: any, idx: number) => (
+                                        <div key={item.id || idx} className="p-3.5 flex justify-between items-center text-[12.5px]">
+                                          <div>
+                                            <p className="font-semibold text-slate-800">{item.name}</p>
+                                            <div className="flex gap-2 text-[10.5px] text-slate-400 mt-1 font-medium">
+                                              {item.color && <span>Warna: {item.color}</span>}
+                                              {item.size && <span>Ukuran: {item.size}</span>}
+                                              {item.unit && <span>Satuan: {item.unit}</span>}
+                                            </div>
+                                            {item.catatan && (
+                                              <p className="text-[11px] text-amber-700 bg-amber-50/50 border border-amber-100/50 rounded-md px-2 py-0.5 mt-1.5 italic">
+                                                Note: "{item.catatan}"
+                                              </p>
+                                            )}
                                           </div>
-                                          {item.catatan && (
-                                            <p className="text-[11px] text-amber-700 bg-amber-50/50 border border-amber-100/50 rounded-md px-2 py-0.5 mt-1.5 italic">
-                                              Note: "{item.catatan}"
+                                          <div className="text-right shrink-0 ml-4">
+                                            <p className="font-bold text-slate-800">{formatRupiah(item.price * item.quantity)}</p>
+                                            <p className="text-[11px] text-slate-400 mt-0.5">
+                                              {item.quantity.toString().replace(/\./g, ',')} {item.unit} x {formatRupiah(item.price)}
                                             </p>
-                                          )}
+                                          </div>
                                         </div>
-                                        <div className="text-right shrink-0 ml-4">
-                                          <p className="font-bold text-slate-800">{formatRupiah(item.price * item.quantity)}</p>
-                                          <p className="text-[11px] text-slate-400 mt-0.5">
-                                            {item.quantity.toString().replace(/\./g, ',')} {item.unit} x {formatRupiah(item.price)}
-                                          </p>
+                                      ))}
+                                      {/* Rincian Harga / Ringkasan Pembayaran */}
+                                      <div className="p-3.5 bg-slate-50/50 space-y-2 text-[12px] font-[family-name:var(--font-inter)]">
+                                        <div className="flex justify-between text-slate-500">
+                                          <span>Subtotal:</span>
+                                          <span className="font-medium">{formatRupiah(order.subtotal || order.grand_total)}</span>
+                                        </div>
+                                        {((order.subtotal || 0) - (order.grand_total || 0)) > 0 && (
+                                          <div className="flex justify-between text-rose-600">
+                                            <span>Potongan Harga / Diskon:</span>
+                                            <span className="font-semibold">- {formatRupiah((order.subtotal || 0) - (order.grand_total || 0))}</span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between text-slate-800 font-bold border-t border-slate-100 pt-2 text-[13px]">
+                                          <span>Total Tagihan:</span>
+                                          <span className="text-[#8B5E3C]">{formatRupiah(order.grand_total)}</span>
                                         </div>
                                       </div>
-                                    ))
+                                    </>
                                   ) : (
                                     <div className="p-4 text-center text-slate-400">Tidak ada detail item pesanan.</div>
                                   )}
@@ -1007,21 +1122,210 @@ export default function OrdersAdminPage() {
                   Detail Nominal & Barang Belanjaan
                 </p>
 
-                <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-1">
                   {editItems.map((item, idx) => (
-                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                      <div className="space-y-1">
-                        <p className="font-bold text-slate-800">{item.name}</p>
-                        <p className="text-[10px] text-slate-400">
-                          {[item.color && `Warna: ${item.color}`, item.size && `Ukuran: ${item.size}`].filter(Boolean).join(', ')}
-                        </p>
+                    <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100/50 flex flex-col gap-4 text-xs">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Nama Barang / Layanan */}
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase">Nama Barang / Jasa</label>
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={e => handleItemNameChange(idx, e.target.value)}
+                            className="w-full px-2.5 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white font-semibold"
+                          />
+                        </div>
+
+                        {/* Varian & Satuan */}
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Warna */}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[9px] text-slate-400 font-semibold uppercase">Warna</label>
+                            {(() => {
+                              const { colors } = getProductOptions(item.product_id);
+                              const hasMultipleColors = colors.length > 1;
+                              const isColorCustom = item.color && !colors.includes(item.color);
+                              const showColorInput = !hasMultipleColors || item._customColorActive || isColorCustom;
+
+                              return hasMultipleColors ? (
+                                <div className="flex flex-col gap-1 w-full">
+                                  <div className="relative">
+                                    <select
+                                      value={isColorCustom || item._customColorActive ? '__custom__' : (item.color || '')}
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        const next = [...editItems];
+                                        if (val === '__custom__') {
+                                          next[idx]._customColorActive = true;
+                                          if (!isColorCustom) {
+                                            next[idx].color = '';
+                                          }
+                                        } else {
+                                          next[idx]._customColorActive = false;
+                                          next[idx].color = val || null;
+                                        }
+                                        setEditItems(next);
+                                      }}
+                                      className="w-full px-1.5 pr-6 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white appearance-none cursor-pointer font-medium"
+                                    >
+                                      <option value="">Tidak ada</option>
+                                      {colors.map((c: string) => (
+                                        <option key={c} value={c}>{c}</option>
+                                      ))}
+                                      <option value="__custom__">Input Manual...</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={10} />
+                                  </div>
+                                  {showColorInput && (
+                                    <input
+                                      type="text"
+                                      value={item.color || ''}
+                                      onChange={e => handleItemColorChange(idx, e.target.value)}
+                                      placeholder="Warna kustom"
+                                      className="w-full px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white animate-fade-in"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={item.color || ''}
+                                  onChange={e => handleItemColorChange(idx, e.target.value)}
+                                  placeholder="Tidak ada"
+                                  className="w-full px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white"
+                                />
+                              );
+                            })()}
+                          </div>
+
+                          {/* Ukuran */}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[9px] text-slate-400 font-semibold uppercase">Ukuran</label>
+                            {(() => {
+                              const { sizes } = getProductOptions(item.product_id);
+                              const hasMultipleSizes = sizes.length > 1;
+                              const isSizeCustom = item.size && !sizes.includes(item.size);
+                              const showSizeInput = !hasMultipleSizes || item._customSizeActive || isSizeCustom;
+
+                              return hasMultipleSizes ? (
+                                <div className="flex flex-col gap-1 w-full">
+                                  <div className="relative">
+                                    <select
+                                      value={isSizeCustom || item._customSizeActive ? '__custom__' : (item.size || '')}
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        const next = [...editItems];
+                                        if (val === '__custom__') {
+                                          next[idx]._customSizeActive = true;
+                                          if (!isSizeCustom) {
+                                            next[idx].size = '';
+                                          }
+                                        } else {
+                                          next[idx]._customSizeActive = false;
+                                          next[idx].size = val || null;
+                                        }
+                                        setEditItems(next);
+                                      }}
+                                      className="w-full px-1.5 pr-6 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white appearance-none cursor-pointer font-medium"
+                                    >
+                                      <option value="">Tidak ada</option>
+                                      {sizes.map((s: string) => (
+                                        <option key={s} value={s}>{s}</option>
+                                      ))}
+                                      <option value="__custom__">Input Manual...</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={10} />
+                                  </div>
+                                  {showSizeInput && (
+                                    <input
+                                      type="text"
+                                      value={item.size || ''}
+                                      onChange={e => handleItemSizeChange(idx, e.target.value)}
+                                      placeholder="Ukuran kustom"
+                                      className="w-full px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white animate-fade-in"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={item.size || ''}
+                                  onChange={e => handleItemSizeChange(idx, e.target.value)}
+                                  placeholder="Tidak ada"
+                                  className="w-full px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white"
+                                />
+                              );
+                            })()}
+                          </div>
+
+                          {/* Satuan */}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[9px] text-slate-400 font-semibold uppercase">Satuan</label>
+                            {(() => {
+                              const { units } = getProductOptions(item.product_id);
+                              const hasMultipleUnits = units.length > 1;
+                              const isUnitCustom = item.unit && !units.includes(item.unit);
+                              const showUnitInput = !hasMultipleUnits || item._customUnitActive || isUnitCustom;
+
+                              return hasMultipleUnits ? (
+                                <div className="flex flex-col gap-1 w-full">
+                                  <div className="relative">
+                                    <select
+                                      value={isUnitCustom || item._customUnitActive ? '__custom__' : (item.unit || '')}
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        const next = [...editItems];
+                                        if (val === '__custom__') {
+                                          next[idx]._customUnitActive = true;
+                                          if (!isUnitCustom) {
+                                            next[idx].unit = '';
+                                          }
+                                        } else {
+                                          next[idx]._customUnitActive = false;
+                                          next[idx].unit = val || 'pcs';
+                                        }
+                                        setEditItems(next);
+                                      }}
+                                      className="w-full px-1.5 pr-6 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white appearance-none cursor-pointer font-medium"
+                                    >
+                                      <option value="">Tidak ada</option>
+                                      {units.map((u: string) => (
+                                        <option key={u} value={u}>{u}</option>
+                                      ))}
+                                      <option value="__custom__">Input Manual...</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={10} />
+                                  </div>
+                                  {showUnitInput && (
+                                    <input
+                                      type="text"
+                                      value={item.unit || ''}
+                                      onChange={e => handleItemUnitChange(idx, e.target.value)}
+                                      placeholder="Satuan kustom"
+                                      className="w-full px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white animate-fade-in"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={item.unit || ''}
+                                  onChange={e => handleItemUnitChange(idx, e.target.value)}
+                                  placeholder="pcs"
+                                  className="w-full px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white"
+                                />
+                              );
+                            })()}
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex flex-wrap items-center justify-between border-t border-slate-100/50 pt-3 gap-4">
                         {/* Jumlah Qty */}
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-slate-400 font-semibold uppercase">Qty ({item.unit})</label>
-                          <div className="flex items-center border border-slate-200 rounded-lg h-8 bg-white overflow-hidden w-24">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Jumlah Qty:</span>
+                          <div className="flex items-center border border-slate-200 rounded-lg h-8 bg-white overflow-hidden w-28">
                             <button
                               type="button"
                               onClick={() => handleItemQtyChange(idx, -1)}
@@ -1029,9 +1333,12 @@ export default function OrdersAdminPage() {
                             >
                               -
                             </button>
-                            <span className="font-[family-name:var(--font-inter)] font-semibold text-slate-700 flex-1 text-center text-xs">
-                              {item.quantity.toString().replace(/\./g, ',')}
-                            </span>
+                            <input
+                              type="text"
+                              value={item._rawQty !== undefined ? item._rawQty : item.quantity.toString().replace(/\./g, ',')}
+                              onChange={e => handleItemQtyInput(idx, e.target.value)}
+                              className="w-14 h-full font-[family-name:var(--font-inter)] font-semibold text-slate-700 text-center text-xs focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] border-l border-r border-slate-200"
+                            />
                             <button
                               type="button"
                               onClick={() => handleItemQtyChange(idx, 1)}
@@ -1042,21 +1349,22 @@ export default function OrdersAdminPage() {
                           </div>
                         </div>
 
-                        {/* Harga Satuan */}
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] text-slate-400 font-semibold uppercase">Harga Satuan</label>
-                          <input
-                            type="text"
-                            value={item.price}
-                            onChange={e => handleItemPriceChange(idx, e.target.value)}
-                            className="w-28 px-2.5 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white text-right"
-                          />
-                        </div>
+                        {/* Harga Satuan & Subtotal */}
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase">Harga Satuan (Rp):</span>
+                            <input
+                              type="text"
+                              value={item.price}
+                              onChange={e => handleItemPriceChange(idx, e.target.value)}
+                              className="w-24 px-2 h-8 rounded-lg border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#8B5E3C] bg-white text-right"
+                            />
+                          </div>
 
-                        {/* Total per Item */}
-                        <div className="flex flex-col gap-1 items-end min-w-[70px]">
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase">Subtotal</span>
-                          <span className="font-bold text-slate-700 h-8 flex items-center">{formatRupiah(item.price * item.quantity)}</span>
+                          <div className="flex items-center gap-2 min-w-[120px] justify-end">
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase">Subtotal:</span>
+                            <span className="font-bold text-slate-700">{formatRupiah(item.price * item.quantity)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1064,34 +1372,61 @@ export default function OrdersAdminPage() {
                 </div>
               </div>
 
-              {/* Footer Total */}
-              <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-center sm:text-left">
-                  <span className="font-[family-name:var(--font-inter)] text-[12px] text-slate-500">Estimasi Total Tagihan Baru:</span>
-                  <p className="font-[family-name:var(--font-inter)] text-xl font-bold text-[#8B5E3C]">
-                    {formatRupiah(editItems.reduce((acc, item) => acc + (item.price * item.quantity), 0))}
-                  </p>
+              {/* Input Potongan Harga & Perhitungan Total */}
+              <div className="border-t border-slate-100 pt-4 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-end gap-4">
+                <div className="w-full sm:w-72">
+                  <label className="block font-[family-name:var(--font-inter)] text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Potongan Harga / Diskon (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    value={editDiscount}
+                    min={0}
+                    onChange={e => setEditDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-[family-name:var(--font-inter)] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/30 focus:border-[#8B5E3C] transition-all bg-slate-50/50"
+                    placeholder="Masukkan nominal diskon..."
+                  />
                 </div>
+                
+                <div className="text-right w-full sm:w-auto font-[family-name:var(--font-inter)] text-xs space-y-1">
+                  <div className="flex justify-between sm:justify-end gap-4 text-slate-500">
+                    <span>Subtotal:</span>
+                    <span className="font-medium">{formatRupiah(editItems.reduce((acc, item) => acc + (item.price * item.quantity), 0))}</span>
+                  </div>
+                  {editDiscount > 0 && (
+                    <div className="flex justify-between sm:justify-end gap-4 text-rose-600 font-semibold">
+                      <span>Potongan Diskon:</span>
+                      <span>- {formatRupiah(editDiscount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between sm:justify-end gap-4 text-slate-800 font-bold border-t border-slate-100 pt-1.5 text-sm">
+                    <span>Estimasi Tagihan Baru:</span>
+                    <span className="text-[#8B5E3C] text-base">
+                      {formatRupiah(Math.max(0, editItems.reduce((acc, item) => acc + (item.price * item.quantity), 0) - editDiscount))}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => setIsEditOpen(false)}
-                    className="w-full sm:w-auto px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-xl font-[family-name:var(--font-inter)] text-xs font-semibold cursor-pointer active:scale-95 transition-all"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={saving}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-[#8B5E3C] hover:bg-[#DD9E59] text-white rounded-xl font-[family-name:var(--font-inter)] text-xs font-semibold cursor-pointer active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
-                  >
-                    {saving ? (
-                      <><Loader2 size={13} className="animate-spin" /> Menyimpan...</>
-                    ) : (
-                      'Simpan Perubahan'
-                    )}
-                  </button>
-                </div>
+              {/* Footer Aksi */}
+              <div className="border-t border-slate-100 pt-4 flex justify-end gap-2">
+                <button
+                  onClick={() => setIsEditOpen(false)}
+                  className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-xl font-[family-name:var(--font-inter)] text-xs font-semibold cursor-pointer active:scale-95 transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-[#8B5E3C] hover:bg-[#DD9E59] text-white rounded-xl font-[family-name:var(--font-inter)] text-xs font-semibold cursor-pointer active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <><Loader2 size={13} className="animate-spin" /> Menyimpan...</>
+                  ) : (
+                    'Simpan Perubahan'
+                  )}
+                </button>
               </div>
             </motion.div>
           </motion.div>

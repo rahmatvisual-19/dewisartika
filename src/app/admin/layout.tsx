@@ -21,11 +21,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn('Session check error, clearing local session:', error.message);
+          // If refresh token is invalid, clear stale tokens from localStorage
+          if (error.message.includes('Refresh Token') || error.status === 400) {
+            await supabase.auth.signOut().catch(() => {});
+          }
+          router.replace('/admin/login');
+          setLoading(false);
+          return;
+        }
+
+        const session = data?.session;
+        if (!session) {
+          router.replace('/admin/login');
+        } else {
+          setSession(session);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Session retrieval failed:', err);
         router.replace('/admin/login');
-      } else {
-        setSession(session);
         setLoading(false);
       }
     };
